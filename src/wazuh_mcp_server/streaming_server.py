@@ -11,7 +11,7 @@ from tools.tool_filter import get_enabled_tools      # filtering logic
 _LOG = logging.getLogger(__name__)
 
 
-def serve_streaming(host: str, port: int, config_path: str | None = None) -> None:
+def serve_streaming(host: str, port: int) -> None:
     # Load environment variables
     from env_config import get_mcp_config
     
