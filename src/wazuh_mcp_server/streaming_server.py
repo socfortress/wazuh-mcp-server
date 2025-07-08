@@ -5,18 +5,22 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from mcp.server import Server
-from .clusters_information import load_clusters_from_yaml
 from tools import TOOL_REGISTRY                      # full catalogue
 from tools.tool_filter import get_enabled_tools      # filtering logic
 
 _LOG = logging.getLogger(__name__)
 
 
-def serve_streaming(host: str, port: int, config_path: str | None) -> None:
-    # --------------------------------------------------------------------- #
-    # 1. Multi-cluster registry                                             #
-    # --------------------------------------------------------------------- #
-    registry = load_clusters_from_yaml(config_path)
+def serve_streaming(host: str, port: int, config_path: str | None = None) -> None:
+    # Load environment variables
+    from env_config import get_mcp_config
+    
+    config = get_mcp_config()
+    
+    # Create a simple registry with the single cluster
+    registry = {
+        "default": config.clusters[0]  # Use the first (and only) cluster
+    }
 
     # --------------------------------------------------------------------- #
     # 2. Filter the tool catalogue                                          #

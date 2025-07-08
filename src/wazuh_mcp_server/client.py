@@ -1,6 +1,6 @@
 import httpx, time, asyncio, logging
-from typing import Dict, Optional
-from .clusters_information import ClusterInfo
+from typing import Optional
+from env_config import ClusterConfig
 
 _LOG = logging.getLogger(__name__)
 
@@ -9,7 +9,7 @@ class WazuhClient:
     _token: Optional[str] = None
     _expiry: float        = 0.0
 
-    def __init__(self, cluster: ClusterInfo):
+    def __init__(self, cluster: ClusterConfig):
         self.cluster = cluster
         self._client = httpx.AsyncClient(
             base_url=str(cluster.api_url),
@@ -36,9 +36,16 @@ class WazuhClient:
         return await self._client.request(method, url, headers=headers, **kw)
 
 # Simple registry shared across tools
-_clients: Dict[str, WazuhClient] = {}
+_client: Optional[WazuhClient] = None
 
-def get_client(cluster_name: str, registry) -> WazuhClient:
-    if cluster_name not in _clients:
-        _clients[cluster_name] = WazuhClient(registry[cluster_name])
-    return _clients[cluster_name]
+def get_client(cluster_name: str = "default", registry=None) -> WazuhClient:
+    global _client
+    if _client is None:
+        if registry and "default" in registry:
+            _client = WazuhClient(registry["default"])
+        else:
+            # Fallback to environment config
+            from env_config import get_mcp_config
+            config = get_mcp_config()
+            _client = WazuhClient(config.clusters[0])
+    return _client
