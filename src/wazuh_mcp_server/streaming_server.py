@@ -13,7 +13,7 @@ _LOG = logging.getLogger(__name__)
 
 def serve_streaming(host: str, port: int) -> None:
     # Load environment variables
-    from env_config import get_mcp_config
+    from .env_config import get_mcp_config
     
     config = get_mcp_config()
     

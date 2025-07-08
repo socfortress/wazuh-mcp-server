@@ -1,6 +1,6 @@
 import httpx, time, asyncio, logging
 from typing import Optional
-from env_config import ClusterConfig
+from .env_config import ClusterConfig
 
 _LOG = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def get_client(cluster_name: str = "default", registry=None) -> WazuhClient:
             _client = WazuhClient(registry["default"])
         else:
             # Fallback to environment config
-            from env_config import get_mcp_config
+            from .env_config import get_mcp_config
             config = get_mcp_config()
             _client = WazuhClient(config.clusters[0])
     return _client

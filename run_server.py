@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Simple script to start the Wazuh MCP server without PYTHONPATH issues.
-Usage: python run_server.py [--host HOST] [--port PORT]
+Usage: python run_server.py [--host HOST] [--port PORT] [--transport stream]
 """
 import sys
 from pathlib import Path
@@ -16,7 +16,7 @@ def main():
     
     # Run with default arguments if none provided
     if len(sys.argv) == 1:
-        sys.argv.extend(["--host", "0.0.0.0", "--port", "8082"])
+        sys.argv.extend(["--host", "0.0.0.0", "--port", "8082", "--transport", "stream"])
     
     server_main()
 
