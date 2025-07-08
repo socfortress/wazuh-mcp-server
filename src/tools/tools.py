@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict
 from mcp_server_core import ToolExecutionError
 from .tool_params import AuthenticateArgs, GetAgentsArgs

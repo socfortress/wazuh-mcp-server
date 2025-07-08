@@ -13,7 +13,7 @@ dependencies = [
   "starlette>=0.37",
   "uvicorn>=0.30",
   "python-multipart>=0.0.9",
-  "mcp-server-core>=0.1.3"   # thin facade you used in the OpenSearch project
+  "mcp[cli]>=1.9.4"
 ]
 
 [project.scripts]

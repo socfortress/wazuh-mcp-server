@@ -1,0 +1,17 @@
+# Requirements for the comprehensive Wazuh MCP client
+# Install with: pip install -r client_requirements.txt
+
+# Core dependencies
+httpx>=0.25.0
+pydantic>=2.0.0
+
+# OpenAI and LangChain
+openai>=1.0.0
+langchain>=0.0.350
+
+# Additional LangChain dependencies
+langchain-openai>=0.0.1
+
+# For better async support (optional)
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
