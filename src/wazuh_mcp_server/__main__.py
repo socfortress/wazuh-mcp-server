@@ -1,18 +1,20 @@
 import argparse
-from wazuh_mcp_server.streaming_server import serve_streaming
+import os
+from wazuh_mcp_server.streaming_server import build_app
 
-def main() -> None:
-    parser = argparse.ArgumentParser("wazuh-mcp-server")
-    parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8080)
-    parser.add_argument("--transport", default="stream", choices=["stream"], 
-                        help="Transport type (currently only 'stream' is supported)")
-    args = parser.parse_args()
+def main():
+    # Set default log level for FastMCP
+    os.environ.setdefault("LOG_LEVEL", "INFO")
     
-    if args.transport == "stream":
-        serve_streaming(host=args.host, port=args.port)
-    else:
-        raise ValueError(f"Unsupported transport: {args.transport}")
+    p = argparse.ArgumentParser("wazuh-mcp-server")
+    p.add_argument("--host", default="0.0.0.0")
+    p.add_argument("--port", type=int, default=8080)
+    args = p.parse_args()
+    
+    # Use FastMCP's built-in server
+    app = build_app()
+    import uvicorn
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 if __name__ == "__main__":
     main()

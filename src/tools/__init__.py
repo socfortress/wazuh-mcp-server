@@ -1,1 +1,1 @@
-from .tools import TOOL_REGISTRY
+from .tools import TOOL_REGISTRY   # re-export for import convenience

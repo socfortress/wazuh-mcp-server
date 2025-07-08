@@ -1,14 +1,5 @@
-# requirements.in  – runtime dependencies for wazuh-mcp-server
-
-# MCP SDK (includes the Server class and CLI helpers)
-mcp[cli]>=1.9.4
-
-# HTTP / ASGI stack
-httpx[http2]>=0.27
-starlette>=0.37
+fastmcp>=0.4
 uvicorn[standard]>=0.30
-python-multipart>=0.0.9        # Starlette forms/file-upload helper
-
-# Data-handling
+httpx[http2]>=0.27
 pydantic>=2.7
 PyYAML>=6.0

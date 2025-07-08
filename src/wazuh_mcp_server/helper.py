@@ -1,11 +1,11 @@
-import json, logging
-from .client import get_client
+"""
+Thin wrappers around Wazuh endpoints.
+"""
 from typing import Dict, Any
+from .client import get_client
 
-_LOG = logging.getLogger(__name__)
-
-async def list_agents(registry=None, params: Dict[str, Any] = None) -> Dict[str, Any]:
-    cli = get_client(registry=registry)
-    resp = await cli.request("GET", "/agents", params=params or {})
+async def list_agents(params: Dict[str, Any]) -> Dict[str, Any]:
+    cli = get_client()
+    resp = await cli.request("GET", "/agents", params=params)
     resp.raise_for_status()
     return resp.json()

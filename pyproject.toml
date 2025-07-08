@@ -15,7 +15,8 @@ dependencies = [
   "python-multipart>=0.0.9",
   "mcp[cli]>=1.9.4",
   "sse-starlette",
-  "PyYAML>=6.0"
+  "PyYAML>=6.0",
+  "fastmcp>=0.4"
 ]
 
 [project.scripts]
