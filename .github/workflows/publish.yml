@@ -2,8 +2,10 @@ name: Build and Publish
 
 on:
   push:
+    branches:
+      - main  # Trigger on every push to main branch
     tags:
-      - 'v*'  # Trigger on version tags like v1.0.0, v0.1.0, etc.
+      - 'v*'  # Also trigger on version tags like v1.0.0, v0.1.0, etc.
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
