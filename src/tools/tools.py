@@ -1,10 +1,8 @@
 import json
 from typing import Any, Dict
-from mcp_server_core import ToolExecutionError
 from .tool_params import AuthenticateArgs, GetAgentsArgs
-from ..clusters_information import load_clusters_from_yaml
-from ..client import get_client
-from ..helper import list_agents
+from wazuh_mcp_server.client import get_client
+from wazuh_mcp_server.helper import list_agents
 
 TOOL_REGISTRY: Dict[str, Dict[str, Any]] = {}
 

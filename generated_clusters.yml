@@ -1,0 +1,7 @@
+clusters:
+  prod:
+    api_url: https://ashwzhma.socfortress.local:55000
+    name: prod
+    password: wazuh-wui
+    ssl_verify: false
+    username: wazuh-wui

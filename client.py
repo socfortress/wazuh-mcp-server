@@ -302,11 +302,20 @@ class WazuhMCPClient:
 class WazuhLangChainTool(BaseTool):
     """LangChain tool wrapper for Wazuh MCP tools"""
     
+    name: str = ""
+    description: str = ""
+    
     def __init__(self, wazuh_tool: WazuhTool, mcp_client: WazuhMCPClient):
-        self.wazuh_tool = wazuh_tool
-        self.mcp_client = mcp_client
+        # Set the required BaseTool attributes
         self.name = wazuh_tool.name.lower().replace("tool", "")
-        self.description = wazuh_tool.description
+        self.description = wazuh_tool.description or f"Wazuh tool: {wazuh_tool.name}"
+        
+        # Store instances
+        self._wazuh_tool = wazuh_tool
+        self._mcp_client = mcp_client
+        
+        # Initialize BaseTool
+        super().__init__()
         
     def _run(self, **kwargs) -> str:
         """Run the tool synchronously"""
@@ -328,7 +337,7 @@ class WazuhLangChainTool(BaseTool):
                 # Multiple parameters
                 args = kwargs
                 
-            result = await self.mcp_client.call_tool(self.wazuh_tool.name, args)
+            result = await self._mcp_client.call_tool(self._wazuh_tool.name, args)
             
             if result.get("success"):
                 data = result.get("data", {})

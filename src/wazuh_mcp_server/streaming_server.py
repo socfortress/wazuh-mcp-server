@@ -1,10 +1,10 @@
 from __future__ import annotations
 import os, json, logging
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse, EventSourceResponse
+from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from mcp_server_core import Server
+from mcp.server import Server
 from .clusters_information import load_clusters_from_yaml
 from tools import TOOL_REGISTRY                      # full catalogue
 from tools.tool_filter import get_enabled_tools      # filtering logic
@@ -28,7 +28,7 @@ def serve_streaming(host: str, port: int, config_path: str | None) -> None:
     # --------------------------------------------------------------------- #
     # 3. MCP server                                                         #
     # --------------------------------------------------------------------- #
-    mcp = Server()
+    mcp = Server("wazuh-mcp-server", version="0.1.0")
 
     @mcp.list_tools()
     async def list_tools():
@@ -49,24 +49,72 @@ def serve_streaming(host: str, port: int, config_path: str | None) -> None:
         return await fn(arguments, registry=registry)
 
     # --------------------------------------------------------------------- #
-    # 4. Transport endpoints (SSE / OpenAI Streamable)                       #
+    # 4. Transport endpoints (HTTP/JSON)                                     #
     # --------------------------------------------------------------------- #
-    async def sse_endpoint(request):
-        async def event_generator():
-            async for message in mcp.streaming_adapter(request):
-                yield {"data": json.dumps(message)}
-        return EventSourceResponse(event_generator())
+    async def messages_endpoint(request):
+        """Handle OpenAI-compatible chat completions"""
+        try:
+            body = await request.json()
+            messages = body.get("messages", [])
+            
+            # Check if this is a tool listing request
+            if messages and messages[0].get("content") == "list_tools":
+                tools = await list_tools()
+                return JSONResponse({
+                    "id": "chatcmpl-tools",
+                    "object": "chat.completion",
+                    "created": 1234567890,
+                    "model": "wazuh-mcp-server",
+                    "choices": [{
+                        "index": 0,
+                        "message": {
+                            "role": "assistant",
+                            "content": json.dumps(tools)
+                        },
+                        "finish_reason": "stop"
+                    }]
+                })
+            
+            # Handle regular chat messages
+            last_message = messages[-1] if messages else {}
+            user_content = last_message.get("content", "")
+            
+            # Simple response for now
+            return JSONResponse({
+                "id": "chatcmpl-response",
+                "object": "chat.completion",
+                "created": 1234567890,
+                "model": "wazuh-mcp-server",
+                "choices": [{
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": f"Received: {user_content}"
+                    },
+                    "finish_reason": "stop"
+                }]
+            })
+            
+        except Exception as e:
+            _LOG.error(f"Error handling messages endpoint: {e}")
+            return JSONResponse({"error": str(e)}, status_code=500)
 
-    async def oa_endpoint(request):
-        return await mcp.openai_streamable_adapter(request)
+    async def tools_endpoint(request):
+        """Handle tool listing requests"""
+        try:
+            tools = await list_tools()
+            return JSONResponse({"tools": tools})
+        except Exception as e:
+            _LOG.error(f"Error handling tools endpoint: {e}")
+            return JSONResponse({"error": str(e)}, status_code=500)
 
     async def health(_):
         return JSONResponse({"status": "ok"})
 
     app = Starlette(
         routes=[
-            Route("/sse", sse_endpoint),
-            Route("/messages", oa_endpoint, methods=["POST"]),
+            Route("/tools", tools_endpoint),
+            Route("/messages", messages_endpoint, methods=["POST"]),
             Route("/health", health),
         ]
     )

@@ -16,7 +16,7 @@ def load_clusters_from_yaml(path: Optional[str]) -> Dict[str, ClusterInfo]:
         raise RuntimeError("Must supply --config when running in multi-cluster mode")
     data = yaml.safe_load(Path(path).read_text()) or {}
     items = {}
-    for item in data.get("clusters", []):
+    for item in data.get("clusters", {}).values():
         ci = ClusterInfo(**item)
         items[ci.name] = ci
     if not items:

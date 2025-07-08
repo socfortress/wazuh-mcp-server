@@ -13,7 +13,9 @@ dependencies = [
   "starlette>=0.37",
   "uvicorn>=0.30",
   "python-multipart>=0.0.9",
-  "mcp[cli]>=1.9.4"
+  "mcp[cli]>=1.9.4",
+  "sse-starlette",
+  "PyYAML>=6.0"
 ]
 
 [project.scripts]
@@ -22,3 +24,6 @@ wazuh-mcp-server = "wazuh_mcp_server.__main__:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wazuh_mcp_server", "src/tools"]
