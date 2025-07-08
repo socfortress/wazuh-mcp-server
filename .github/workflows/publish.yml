@@ -1,0 +1,85 @@
+name: Build and Publish
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0, v0.1.0, etc.
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Build package
+      run: |
+        python -m build
+    
+    - name: Check package
+      run: |
+        python -m twine check dist/*
+    
+    - name: Test installation
+      run: |
+        pip install dist/*.whl
+        python -c "import wazuh_mcp_server; print('✅ Package imports successfully')"
+        python -m wazuh_mcp_server --help
+        wazuh-mcp-server --help
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: dist/
+    
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/*.whl
+          dist/*.tar.gz
+        body: |
+          ## Installation
+          
+          ### From GitHub (recommended)
+          ```bash
+          pip install git+https://github.com/socfortress/wazuh-mcp-server.git
+          ```
+          
+          ### From Release Artifacts
+          Download the `.whl` file from the assets below and install:
+          ```bash
+          pip install wazuh_mcp_server-*.whl
+          ```
+          
+          ## Usage
+          After installation, you can run the server with:
+          ```bash
+          python -m wazuh_mcp_server --transport stream
+          ```
+          
+          Or use the console script:
+          ```bash
+          wazuh-mcp-server --transport stream
+          ```
+          
+          ## What's Changed
+          - Built from commit: ${{ github.sha }}
+          - Tag: ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

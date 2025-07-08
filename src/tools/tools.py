@@ -13,19 +13,21 @@ def register(name: str):
     return _decor
 
 @register("AuthenticateTool")
-async def auth_tool(args: AuthenticateArgs, registry, **_):
-    cli = get_client(args.cluster, registry)
+async def auth_tool(args: AuthenticateArgs, registry=None, **_):
+    """Authenticate with the Wazuh manager and refresh the JWT token."""
+    cli = get_client(registry=registry)
     # force a token refresh
     cli._token = None
     await cli._refresh_token()
     return [{
         "type": "text",
-        "text": f"New token acquired for cluster '{args.cluster}'."
+        "text": "New token acquired for Wazuh manager."
     }]
 
 @register("GetAgentsTool")
-async def get_agents_tool(args: GetAgentsArgs, registry, **_):
-    data = await list_agents(args.cluster, registry, params=args.model_dump(exclude_none=True, exclude={"cluster"}))
+async def get_agents_tool(args: GetAgentsArgs, registry=None, **_):
+    """Get a list of agents from the Wazuh manager."""
+    data = await list_agents(registry, params=args.model_dump(exclude_none=True))
     pretty = json.dumps(data, indent=2)[:16000]  # truncate long output
     return [{
         "type": "text",
