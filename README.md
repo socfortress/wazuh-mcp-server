@@ -1,6 +1,17 @@
 # Wazuh-MCP-Server
 
-A **Model–Context–Protocol tool-server** that lets any MCP-aware LLM (e.g. Claude’s “Custom Tool Server”, OpenAI assistants, LangChain agents) **query and manage Wazuh Manager** over its REST API.  
+A **Model–Context–Protocol tool-server** that lets any MCP-aware### 3 . Run the server
+
+```bash
+export LOG_LEVEL=info
+# Using the module (recommended)
+python -m wazuh_mcp_server --transport stream --host 0.0.0.0 --port 8080
+
+# Or using the console script
+wazuh-mcp-server --transport stream --host 0.0.0.0 --port 8080
+```
+
+Open <http://localhost:8080/health> → `{"status":"ok"}` means we're live.g. Claude’s “Custom Tool Server”, OpenAI assistants, LangChain agents) **query and manage Wazuh Manager** over its REST API.  
 It speaks the *stream transport* out-of-the-box (Server-Sent Events + OpenAI-compatible `/messages`).
 
 > **Why?**  
@@ -40,9 +51,27 @@ It speaks the *stream transport* out-of-the-box (Server-Sent Events + OpenAI-com
 
 ### 1 . Install
 
+#### From GitHub (Recommended)
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install wazuh-mcp-server
+pip install git+https://github.com/socfortress/wazuh-mcp-server.git
+```
+
+#### From Release Artifacts
+1. Go to the [Releases page](https://github.com/socfortress/wazuh-mcp-server/releases)
+2. Download the latest `.whl` file
+3. Install with:
+```bash
+pip install wazuh_mcp_server-*.whl
+```
+
+#### From Build Artifacts (Latest Build)
+1. Go to the [Actions tab](https://github.com/socfortress/wazuh-mcp-server/actions)
+2. Click on the latest successful workflow run
+3. Download the `dist` artifact
+4. Extract and install:
+```bash
+pip install wazuh_mcp_server-*.whl
 ```
 
 ### 2 . Describe your Wazuh managers
@@ -72,6 +101,19 @@ wazuh-mcp-server --config clusters.yml --host 0.0.0.0 --port 8080
 ```
 
 Open <http://localhost:8080/health> → `{"status":"ok"}` means we’re live.
+
+---
+
+## 🚀 Continuous Integration
+
+This project uses GitHub Actions to automatically build and test the package on every push to the main branch:
+
+- **Automatic builds**: Every commit to `main` triggers a new build
+- **Quality assurance**: Each build is tested to ensure it installs and runs correctly
+- **Multiple installation methods**: Install from GitHub directly, releases, or build artifacts
+- **Version tags**: Create a git tag (e.g., `v1.0.0`) to trigger an official release
+
+[![Build Status](https://github.com/socfortress/wazuh-mcp-server/actions/workflows/publish.yml/badge.svg)](https://github.com/socfortress/wazuh-mcp-server/actions)
 
 ---
 
@@ -192,19 +234,30 @@ WantedBy=multi-user.target
 ## Development & Testing
 
 ```bash
-git clone https://github.com/your-org/wazuh-mcp-server.git
+git clone https://github.com/socfortress/wazuh-mcp-server.git
 cd wazuh-mcp-server
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.in
-pip install -e .[dev]         # lint / test extras
+pip install -e .         # editable install
 
+# Run tests
 pytest -q
+
+# Run the server in development mode
+python -m wazuh_mcp_server --transport stream --host localhost --port 8080
 ```
 
-Run with hot reload:
+### Testing the Installation
 
 ```bash
-uvicorn wazuh_mcp_server.streaming_server:app --reload --port 8080
+# Test the package can be imported
+python -c "import wazuh_mcp_server; print('✅ Package imports successfully')"
+
+# Test the module can be run
+python -m wazuh_mcp_server --help
+
+# Test the console script
+wazuh-mcp-server --help
 ```
 
 ---
