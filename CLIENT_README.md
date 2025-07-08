@@ -26,36 +26,44 @@ A powerful, intelligent client for the Wazuh MCP (Model Context Protocol) server
    pip install -r client_requirements.txt
    ```
 
-2. **Set up your OpenAI API key**:
+2. **Set up your environment configuration**:
    ```bash
-   export OPENAI_API_KEY="your-api-key-here"
+   python setup_env.py --interactive
    ```
 
-3. **Configure your Wazuh clusters** (use `example_clusters.yml` as template):
-   ```yaml
-   clusters:
-     prod:
-       name: prod
-       api_url: https://wazuh.company.tld:55000
-       username: api-user
-       password: S3cr3t!
-       ssl_verify: true
-   ```
+3. **Edit the .env file** with your actual Wazuh credentials and OpenAI API key
 
 ## 🎯 Usage
+
+### Quick Start with .env
+
+```bash
+# 1. Set up environment configuration
+python setup_env.py --interactive
+
+# 2. Edit .env file with your credentials
+# 3. Run the client
+python client.py
+```
 
 ### Basic Usage
 
 ```bash
+# Use .env configuration (recommended)
+python client.py
+
+# Use YAML configuration (legacy)
 python client.py --config clusters.yml --openai-key YOUR_API_KEY
+
+# Validate configuration
+python client.py --validate-only
 ```
 
 ### Advanced Usage
 
 ```bash
 python client.py \
-  --config clusters.yml \
-  --openai-key YOUR_API_KEY \
+  --env-file /path/to/.env \
   --model gpt-4 \
   --host 0.0.0.0 \
   --port 8080
@@ -154,6 +162,71 @@ clusters:
 --port            Port for MCP server (default: 8080)
 --no-interactive  Don't start interactive chat
 ```
+
+## 🔧 Environment Configuration (.env)
+
+The client now supports environment-based configuration using a `.env` file, which is more secure and flexible than YAML files for sensitive credentials.
+
+### Setting up .env Configuration
+
+1. **Create a .env file**:
+   ```bash
+   python setup_env.py --interactive
+   ```
+
+2. **Or copy from the example**:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your actual values
+   ```
+
+3. **Or convert from existing YAML**:
+   ```bash
+   python setup_env.py --from-yaml clusters.yml
+   ```
+
+### Example .env Configuration
+
+```bash
+# OpenAI Configuration
+OPENAI_API_KEY=sk-your-actual-openai-key-here
+
+# Wazuh Production Cluster
+WAZUH_PROD_URL=https://wazuh.company.tld:55000
+WAZUH_PROD_USERNAME=api-user
+WAZUH_PROD_PASSWORD=S3cr3t!
+WAZUH_PROD_SSL_VERIFY=true
+
+# Wazuh Lab Cluster (optional)
+WAZUH_LAB_URL=https://wazuh-lab:55000
+WAZUH_LAB_USERNAME=wazuh
+WAZUH_LAB_PASSWORD=lab123
+WAZUH_LAB_SSL_VERIFY=false
+
+# MCP Server Configuration
+MCP_SERVER_HOST=0.0.0.0
+MCP_SERVER_PORT=8080
+LOG_LEVEL=info
+
+# Tool Filtering (optional)
+# WAZUH_DISABLED_TOOLS=DeleteAgentTool,RestartManagerTool
+# WAZUH_READ_ONLY=false
+```
+
+### Environment Variables Reference
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `OPENAI_API_KEY` | OpenAI API key | `sk-...` |
+| `WAZUH_{CLUSTER}_URL` | Wazuh API URL | `https://wazuh.company.tld:55000` |
+| `WAZUH_{CLUSTER}_USERNAME` | Wazuh username | `api-user` |
+| `WAZUH_{CLUSTER}_PASSWORD` | Wazuh password | `S3cr3t!` |
+| `WAZUH_{CLUSTER}_SSL_VERIFY` | SSL verification | `true` or `false` |
+| `MCP_SERVER_HOST` | MCP server host | `0.0.0.0` |
+| `MCP_SERVER_PORT` | MCP server port | `8080` |
+| `LOG_LEVEL` | Logging level | `info`, `debug`, `warning` |
+
+Replace `{CLUSTER}` with your cluster name in uppercase (e.g., `PROD`, `LAB`, `STAGING`).
 
 ## 📊 Example Session
 

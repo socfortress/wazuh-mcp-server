@@ -36,43 +36,58 @@ def main():
         print("❌ Failed to install dependencies")
         return 1
     
-    # Step 4: Check for config file
-    if not Path("example_clusters.yml").exists():
-        print("⚠️ Creating example configuration...")
-        config_content = """clusters:
-  prod:
-    name: prod
-    api_url: https://wazuh.company.tld:55000
-    username: api-user
-    password: S3cr3t!
-    ssl_verify: true
-  lab:
-    name: lab
-    api_url: https://wazuh-lab:55000
-    username: wazuh
-    password: lab123
-    ssl_verify: false
+    # Step 4: Check for config file or .env
+    if not Path(".env").exists() and not Path("example_clusters.yml").exists():
+        print("⚠️ Creating example .env file...")
+        env_content = """# Wazuh MCP Server Environment Configuration
+# Fill in your actual values
+
+# OpenAI Configuration
+OPENAI_API_KEY=your-openai-api-key-here
+
+# Wazuh Manager Configuration
+# Production Cluster
+WAZUH_PROD_URL=https://wazuh.company.tld:55000
+WAZUH_PROD_USERNAME=api-user
+WAZUH_PROD_PASSWORD=S3cr3t!
+WAZUH_PROD_SSL_VERIFY=true
+
+# Lab/Testing Cluster (optional)
+# WAZUH_LAB_URL=https://wazuh-lab:55000
+# WAZUH_LAB_USERNAME=wazuh
+# WAZUH_LAB_PASSWORD=lab123
+# WAZUH_LAB_SSL_VERIFY=false
+
+# MCP Server Configuration
+MCP_SERVER_HOST=0.0.0.0
+MCP_SERVER_PORT=8080
+LOG_LEVEL=info
 """
-        with open("example_clusters.yml", "w") as f:
-            f.write(config_content)
-        print("✅ Created example_clusters.yml")
-        print("⚠️ Please edit this file with your actual cluster details")
+        with open(".env", "w") as f:
+            f.write(env_content)
+        print("✅ Created .env file")
+        print("⚠️ Please edit .env file with your actual credentials")
     
     # Step 5: Check OpenAI key
-    if not os.getenv("OPENAI_API_KEY"):
+    if not os.getenv("OPENAI_API_KEY") and not Path(".env").exists():
         print("⚠️ OpenAI API key not found")
         key = input("Enter your OpenAI API key (or press Enter to skip): ")
         if key:
-            print(f"Add this to your environment: export OPENAI_API_KEY='{key}'")
+            print(f"Add this to your .env file: OPENAI_API_KEY={key}")
     
     # Step 6: Show usage
     print("\n🎯 Ready to use!")
     print("Usage examples:")
-    print("  python client.py --config example_clusters.yml")
-    print("  python client.py --config example_clusters.yml --openai-key YOUR_KEY")
-    print("  python setup_client.py  # For detailed setup")
-    print("  python test_client.py   # To test functionality")
-    print("  python examples.py      # For usage examples")
+    if Path(".env").exists():
+        print("  python client.py                                    # Use .env configuration")
+        print("  python client.py --validate-only                    # Validate .env config")
+        print("  python env_config.py                                # Test .env loading")
+    else:
+        print("  python client.py --config example_clusters.yml      # Use YAML config")
+    
+    print("  python setup_client.py                              # For detailed setup")
+    print("  python test_client.py                               # To test functionality")
+    print("  python examples.py                                  # For usage examples")
     
     return 0
 
