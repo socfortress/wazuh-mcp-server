@@ -3,6 +3,7 @@ import os, json, logging
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
+from sse_starlette.sse import EventSourceResponse
 
 from mcp.server import Server
 from tools import TOOL_REGISTRY                      # full catalogue
@@ -115,11 +116,80 @@ def serve_streaming(host: str, port: int) -> None:
     async def health(_):
         return JSONResponse({"status": "ok"})
 
+    async def sse_endpoint(request):
+        """Handle SSE endpoint for MCP protocol"""
+        import asyncio
+        
+        async def event_stream():
+            """Generate SSE events for MCP protocol"""
+            try:
+                # Send initialization message
+                yield {
+                    "event": "message",
+                    "data": json.dumps({
+                        "jsonrpc": "2.0",
+                        "method": "initialize",
+                        "params": {
+                            "protocolVersion": "2024-11-05",
+                            "capabilities": {
+                                "tools": {},
+                                "logging": {}
+                            },
+                            "serverInfo": {
+                                "name": "wazuh-mcp-server",
+                                "version": "0.1.0"
+                            }
+                        }
+                    })
+                }
+                
+                # Send available tools
+                tools = await list_tools()
+                yield {
+                    "event": "message", 
+                    "data": json.dumps({
+                        "jsonrpc": "2.0",
+                        "method": "tools/list",
+                        "params": {
+                            "tools": [
+                                {
+                                    "name": tool["name"],
+                                    "description": tool["description"],
+                                    "inputSchema": {
+                                        "type": "object",
+                                        "properties": {},
+                                        "required": []
+                                    }
+                                }
+                                for tool in tools
+                            ]
+                        }
+                    })
+                }
+                
+                # Keep connection alive
+                while True:
+                    await asyncio.sleep(30)  # Keep-alive every 30 seconds
+                    yield {
+                        "event": "ping",
+                        "data": json.dumps({"timestamp": "keepalive"})
+                    }
+                    
+            except Exception as e:
+                _LOG.error(f"Error in SSE stream: {e}")
+                yield {
+                    "event": "error",
+                    "data": json.dumps({"error": str(e)})
+                }
+        
+        return EventSourceResponse(event_stream())
+
     app = Starlette(
         routes=[
             Route("/tools", tools_endpoint),
             Route("/messages", messages_endpoint, methods=["POST"]),
             Route("/health", health),
+            Route("/sse", sse_endpoint),
         ]
     )
 
