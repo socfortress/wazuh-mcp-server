@@ -46,7 +46,7 @@ async def main():
     print("\n=== Testing Get Agents ===")
     await agent.ainvoke(
         {
-            "input": "Get a list of all agents connected to Wazuh. Include their IDs and statuses.",
+            "input": "What ports are exposed on the agent? Make sure to get the agent ID first.",
         },
     )
 
