@@ -2,11 +2,13 @@
 Test configuration for pytest.
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock
-from wazuh_mcp_server.config import WazuhConfig, ServerConfig, Config
+from unittest.mock import AsyncMock, Mock
+
+import pytest
+
 from wazuh_mcp_server.client import WazuhClient
+from wazuh_mcp_server.config import Config, ServerConfig, WazuhConfig
 
 
 @pytest.fixture
@@ -17,7 +19,7 @@ def wazuh_config():
         username="test-user",
         password="test-password",
         ssl_verify=False,
-        timeout=10
+        timeout=10,
     )
 
 
@@ -30,7 +32,7 @@ def server_config():
         log_level="INFO",
         disabled_tools=[],
         disabled_categories=[],
-        read_only=False
+        read_only=False,
     )
 
 

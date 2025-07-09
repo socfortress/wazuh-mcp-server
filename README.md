@@ -11,10 +11,10 @@ python -m wazuh_mcp_server --transport stream --host 0.0.0.0 --port 8080
 wazuh-mcp-server --transport stream --host 0.0.0.0 --port 8080
 ```
 
-Open <http://localhost:8080/health> → `{"status":"ok"}` means we're live.g. Claude’s “Custom Tool Server”, OpenAI assistants, LangChain agents) **query and manage Wazuh Manager** over its REST API.  
+Open <http://localhost:8080/health> → `{"status":"ok"}` means we're live.g. Claude’s “Custom Tool Server”, OpenAI assistants, LangChain agents) **query and manage Wazuh Manager** over its REST API.
 It speaks the *stream transport* out-of-the-box (Server-Sent Events + OpenAI-compatible `/messages`).
 
-> **Why?**  
+> **Why?**
 > Combine the breadth of Wazuh telemetry with the reasoning power of large language models—without exposing credentials or write APIs to the model itself.
 
 ---
@@ -190,9 +190,9 @@ restart_manager._meta = {
 
 ## Security Notes
 
-* **Credentials** – keep the YAML in a secrets store (Vault, AWS Secrets Manager) and mount at runtime.  
-* **TLS** – always set `ssl_verify: true` in production.  
-* **Least privilege** – create a dedicated Wazuh user with the minimal RBAC role needed by the exposed tools.  
+* **Credentials** – keep the YAML in a secrets store (Vault, AWS Secrets Manager) and mount at runtime.
+* **TLS** – always set `ssl_verify: true` in production.
+* **Least privilege** – create a dedicated Wazuh user with the minimal RBAC role needed by the exposed tools.
 * **Rate limiting / auth front-door** – protect `/sse` & `/messages` with a reverse proxy (NGINX, Envoy) or Starlette middleware if the server is internet-facing.
 
 ---
@@ -293,5 +293,5 @@ flowchart TD
 
 ## License
 
-This project is licensed under the **Apache License 2.0**.  
+This project is licensed under the **Apache License 2.0**.
 See `LICENSE` for the full text.

@@ -19,15 +19,15 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    
+
     - name: Cache pip packages
       uses: actions/cache@v3
       with:
@@ -35,30 +35,30 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
-    
+
     - name: Lint with flake8
       run: |
         flake8 wazuh_mcp_server --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 wazuh_mcp_server --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
-    
+
     - name: Check code formatting with black
       run: |
         black --check wazuh_mcp_server
-    
+
     - name: Check import sorting with isort
       run: |
         isort --check-only wazuh_mcp_server
-    
+
     - name: Type check with mypy
       run: |
         mypy wazuh_mcp_server --ignore-missing-imports
       continue-on-error: true
-    
+
     - name: Test with pytest
       run: |
         pytest --cov=wazuh_mcp_server --cov-report=xml --cov-report=term-missing
@@ -67,67 +67,67 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Needed for version detection
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
     - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
         pip install build twine setuptools wheel
-    
+
     - name: Build source distribution
       run: |
         python -m build --sdist
-    
+
     - name: Build wheel distribution
       run: |
         python -m build --wheel
-    
+
     - name: Check built packages
       run: |
         python -m twine check dist/*
         ls -la dist/
-    
+
     - name: Test package installation
       run: |
         # Create a fresh virtual environment for testing
         python -m venv test_env
         source test_env/bin/activate
-        
+
         # Install the built wheel
         pip install dist/*.whl
-        
+
         # Test imports
         python -c "import wazuh_mcp_server; print('✅ Package imports successfully')"
         python -c "from wazuh_mcp_server import Config, WazuhClient, WazuhMCPServer; print('✅ Main classes importable')"
-        
+
         # Test CLI commands
         python -m wazuh_mcp_server --help
         wazuh-mcp-server --version
-        
+
         # Test with example env vars (should fail gracefully)
         export WAZUH_PROD_URL=""
         export WAZUH_PROD_USERNAME=""
         export WAZUH_PROD_PASSWORD=""
         python -c "from wazuh_mcp_server import Config; print('✅ Config module works')"
-        
+
         deactivate
-    
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: python-package-distributions
         path: dist/
         retention-days: 30
-    
+
     - name: Generate package info
       run: |
         echo "## 📦 Wazuh MCP Server Package" > package_info.md
@@ -166,7 +166,7 @@ jobs:
         echo '```' >> package_info.md
         ls -la dist/ >> package_info.md
         echo '```' >> package_info.md
-    
+
     - name: Upload package info
       uses: actions/upload-artifact@v4
       with:
@@ -180,22 +180,22 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Download built packages
       uses: actions/download-artifact@v4
       with:
         name: python-package-distributions
         path: dist/
-    
+
     - name: Download package info
       uses: actions/download-artifact@v4
       with:
         name: package-info
         path: .
-    
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
@@ -213,14 +213,14 @@ jobs:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     needs: build
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Download built packages
       uses: actions/download-artifact@v4
       with:
         name: python-package-distributions
         path: dist/
-    
+
     - name: Generate development package info
       run: |
         echo "## 🚧 Development Build" > dev_package_info.md
@@ -239,14 +239,14 @@ jobs:
         echo '```' >> dev_package_info.md
         ls -la dist/ >> dev_package_info.md
         echo '```' >> dev_package_info.md
-    
+
     - name: Comment on commit with artifact info
       uses: actions/github-script@v7
       with:
         script: |
           const fs = require('fs');
           const body = fs.readFileSync('dev_package_info.md', 'utf8');
-          
+
           github.rest.repos.createCommitComment({
             owner: context.repo.owner,
             repo: context.repo.repo,

@@ -7,8 +7,8 @@ __author__ = "SOCFortress"
 __email__ = "info@socfortress.co"
 __description__ = "MCP server for Wazuh Manager integration with LLMs"
 
-from .server import WazuhMCPServer
 from .client import WazuhClient
 from .config import Config
+from .server import WazuhMCPServer
 
 __all__ = ["WazuhMCPServer", "WazuhClient", "Config"]

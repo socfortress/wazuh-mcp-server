@@ -175,7 +175,7 @@ wazuh-mcp-server --help
 
 The GitHub Actions workflow will:
 
-1. **On Push to main/develop**: 
+1. **On Push to main/develop**:
    - Run tests across Python 3.8-3.12
    - Build packages
    - Upload artifacts
