@@ -355,6 +355,13 @@ The server exposes the following MCP tools:
   - `mitre` (optional): Filter by MITRE technique ID
   - `distinct` (optional): Look for distinct values
 
+### 8. GetRuleFileContentTool
+- **Purpose**: Get the content of a specific rule file from the ruleset
+- **Parameters**:
+  - `filename` (required): Filename of the rule file to get content from
+  - `raw` (optional): Format response in plain text (default: false)
+  - `relative_dirname` (optional): Filter by relative directory name
+
 ---
 
 ## Development

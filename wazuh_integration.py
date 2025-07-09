@@ -45,7 +45,9 @@ async def main():
 
     print("\n=== Testing Get Agents ===")
     await agent.ainvoke(
-        {"input": "What sysmon rules is responsible for sysmon network connections?"},
+        {
+            "input": "Do I have sysmon related rules installed and what is the raw file of one of these rules?",
+        },
     )
 
 

@@ -143,6 +143,14 @@ class ListRulesArgs(BaseModel):
     distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
+class GetRuleFileContentArgs(BaseModel):
+    """Arguments for getting rule file content."""
+
+    filename: str = Field(..., description="Filename of the rule file to get content from")
+    raw: Optional[bool] = Field(False, description="Format response in plain text")
+    relative_dirname: Optional[str] = Field(None, description="Filter by relative directory name")
+
+
 class WazuhMCPServer:
     """Main MCP server for Wazuh integration."""
 
@@ -165,9 +173,19 @@ class WazuhMCPServer:
 
         if "AuthenticateTool" not in self.config.server.disabled_tools:
 
-            @self.app.tool(name="AuthenticateTool")
+            @self.app.tool(
+                name="AuthenticateTool",
+                description="Force a new JWT token acquisition from Wazuh Manager. This tool requires no parameters and will refresh the authentication token for subsequent API calls.",
+            )
             async def authenticate_tool(args: AuthenticateArgs):
-                """Force a new JWT token acquisition from Wazuh Manager."""
+                """Force a new JWT token acquisition from Wazuh Manager.
+
+                This tool does not require any parameters. Simply call it to refresh
+                the authentication token for subsequent Wazuh API operations.
+
+                Returns:
+                    Success message with authentication details or error message.
+                """
                 try:
                     client = self._get_client()
                     result = await client.authenticate()
@@ -183,9 +201,27 @@ class WazuhMCPServer:
 
         if "GetAgentsTool" not in self.config.server.disabled_tools:
 
-            @self.app.tool(name="GetAgentsTool")
+            @self.app.tool(
+                name="GetAgentsTool",
+                description="Retrieve a list of Wazuh agents with optional filtering. Use this to get information about all agents or filter by status (active, disconnected, never_connected). Parameters should be passed in an 'args' object with 'status', 'limit', and 'offset' fields.",
+            )
             async def get_agents_tool(args: GetAgentsArgs):
-                """Return agents from Wazuh Manager matching optional filters."""
+                """Return agents from Wazuh Manager matching optional filters.
+
+                Args:
+                    args: An object containing:
+                        - status (optional): List of strings to filter by agent status (e.g., ["active"])
+                        - limit (optional): Maximum number of agents to return (default: 500)
+                        - offset (optional): Offset for pagination (default: 0)
+
+                Example usage:
+                    {"args": {"status": ["active"], "limit": 100}}
+                    {"args": {"offset": 50}}
+                    {"args": {}} for all agents
+
+                Returns:
+                    JSON list of agents with their details including ID, name, status, IP, etc.
+                """
                 try:
                     client = self._get_client()
                     data = await client.get_agents(
@@ -202,9 +238,24 @@ class WazuhMCPServer:
 
         if "GetAgentTool" not in self.config.server.disabled_tools:
 
-            @self.app.tool(name="GetAgentTool")
+            @self.app.tool(
+                name="GetAgentTool",
+                description="Get detailed information for a specific Wazuh agent by ID. The agent_id parameter is required and should be passed in an 'args' object. Agent IDs are typically 3+ character strings like '000', '001', etc.",
+            )
             async def get_agent_tool(args: GetAgentArgs):
-                """Get specific agent by ID."""
+                """Get specific agent by ID.
+
+                Args:
+                    args: An object containing:
+                        - agent_id (required): The agent ID to retrieve (e.g., "000", "001")
+
+                Example usage:
+                    {"args": {"agent_id": "000"}}
+                    {"args": {"agent_id": "001"}}
+
+                Returns:
+                    JSON object with detailed agent information including status, OS, version, etc.
+                """
                 try:
                     client = self._get_client()
                     data = await client.get_agent(args.agent_id)
@@ -222,9 +273,35 @@ class WazuhMCPServer:
 
         if "GetAgentPortsTool" not in self.config.server.disabled_tools:
 
-            @self.app.tool(name="GetAgentPortsTool")
+            @self.app.tool(
+                name="GetAgentPortsTool",
+                description="Get network port information for a specific Wazuh agent from syscollector. Requires agent_id in 'args' object. Optional filters include protocol (tcp/udp), local_ip, local_port, remote_ip, state (listening/established), process name, etc.",
+            )
             async def get_agent_ports_tool(args: GetAgentPortsArgs):
-                """Get agents ports information from syscollector."""
+                """Get agents ports information from syscollector.
+
+                Args:
+                    args: An object containing:
+                        - agent_id (required): Agent ID to get ports from (e.g., "000", "001")
+                        - limit (optional): Maximum number of ports to return (default: 500)
+                        - offset (optional): Offset for pagination (default: 0)
+                        - protocol (optional): Filter by protocol ("tcp", "udp")
+                        - local_ip (optional): Filter by local IP address
+                        - local_port (optional): Filter by local port number
+                        - remote_ip (optional): Filter by remote IP address
+                        - state (optional): Filter by connection state ("listening", "established")
+                        - process (optional): Filter by process name
+                        - pid (optional): Filter by process ID
+                        - sort, search, select, q, distinct (optional): Additional filtering
+
+                Example usage:
+                    {"args": {"agent_id": "000"}}
+                    {"args": {"agent_id": "001", "protocol": "tcp", "state": "listening"}}
+                    {"args": {"agent_id": "000", "local_port": "80"}}
+
+                Returns:
+                    JSON list of network ports with local/remote IPs, ports, protocols, states, etc.
+                """
                 try:
                     client = self._get_client()
                     data = await client.get_agent_ports(
@@ -254,9 +331,33 @@ class WazuhMCPServer:
 
         if "GetAgentPackagesTool" not in self.config.server.disabled_tools:
 
-            @self.app.tool(name="GetAgentPackagesTool")
+            @self.app.tool(
+                name="GetAgentPackagesTool",
+                description="Get installed package information for a specific Wazuh agent from syscollector. Requires agent_id in 'args' object. Optional filters include vendor, package name, architecture, format (deb/rpm), version, etc.",
+            )
             async def get_agent_packages_tool(args: GetAgentPackagesArgs):
-                """Get agents packages information from syscollector."""
+                """Get agents packages information from syscollector.
+
+                Args:
+                    args: An object containing:
+                        - agent_id (required): Agent ID to get packages from (e.g., "000", "001")
+                        - limit (optional): Maximum number of packages to return (default: 500)
+                        - offset (optional): Offset for pagination (default: 0)
+                        - vendor (optional): Filter by package vendor
+                        - name (optional): Filter by package name
+                        - architecture (optional): Filter by architecture (e.g., "amd64", "x86_64")
+                        - format (optional): Filter by package format (e.g., "deb", "rpm")
+                        - version (optional): Filter by package version
+                        - sort, search, select, q, distinct (optional): Additional filtering
+
+                Example usage:
+                    {"args": {"agent_id": "000"}}
+                    {"args": {"agent_id": "001", "name": "nginx", "format": "deb"}}
+                    {"args": {"agent_id": "000", "vendor": "Ubuntu"}}
+
+                Returns:
+                    JSON list of installed packages with names, versions, architectures, sizes, etc.
+                """
                 try:
                     client = self._get_client()
                     data = await client.get_agent_packages(
@@ -283,9 +384,35 @@ class WazuhMCPServer:
 
         if "GetAgentProcessesTool" not in self.config.server.disabled_tools:
 
-            @self.app.tool(name="GetAgentProcessesTool")
+            @self.app.tool(
+                name="GetAgentProcessesTool",
+                description="Get running process information for a specific Wazuh agent from syscollector. Requires agent_id in 'args' object. Optional filters include PID, process name, state, user/group information, priority, etc.",
+            )
             async def get_agent_processes_tool(args: GetAgentProcessesArgs):
-                """Get agents processes information from syscollector."""
+                """Get agents processes information from syscollector.
+
+                Args:
+                    args: An object containing:
+                        - agent_id (required): Agent ID to get processes from (e.g., "000", "001")
+                        - limit (optional): Maximum number of processes to return (default: 500)
+                        - offset (optional): Offset for pagination (default: 0)
+                        - pid (optional): Filter by process ID
+                        - name (optional): Filter by process name
+                        - state (optional): Filter by process state
+                        - ppid (optional): Filter by parent process ID
+                        - euser, ruser, suser (optional): Filter by effective/real/saved user
+                        - egroup, rgroup, sgroup, fgroup (optional): Filter by group information
+                        - priority (optional): Filter by process priority
+                        - sort, search, select, q, distinct (optional): Additional filtering
+
+                Example usage:
+                    {"args": {"agent_id": "000"}}
+                    {"args": {"agent_id": "001", "name": "nginx", "state": "S"}}
+                    {"args": {"agent_id": "000", "euser": "root"}}
+
+                Returns:
+                    JSON list of running processes with PIDs, names, states, memory usage, etc.
+                """
                 try:
                     client = self._get_client()
                     data = await client.get_agent_processes(
@@ -321,9 +448,35 @@ class WazuhMCPServer:
 
         if "ListRulesTool" not in self.config.server.disabled_tools:
 
-            @self.app.tool(name="ListRulesTool")
+            @self.app.tool(
+                name="ListRulesTool",
+                description="List Wazuh detection rules with optional filtering. All parameters should be passed in an 'args' object. Use filters like 'search' for text search, 'group' for rule categories, 'level' for severity, 'status' for enabled/disabled rules, compliance filters (pci_dss, gdpr, hipaa, mitre), etc.",
+            )
             async def list_rules_tool(args: ListRulesArgs):
-                """List rules from Wazuh Manager matching optional filters."""
+                """List rules from Wazuh Manager matching optional filters.
+
+                Args:
+                    args: An object containing:
+                        - rule_ids (optional): List of specific rule IDs to retrieve
+                        - limit (optional): Maximum number of rules to return (default: 500)
+                        - offset (optional): Offset for pagination (default: 0)
+                        - search (optional): Text search in rule descriptions/content
+                        - group (optional): Filter by rule group (e.g., "sysmon", "windows")
+                        - level (optional): Filter by rule level/severity (e.g., "4" or "2-4")
+                        - status (optional): Filter by status ("enabled", "disabled", "all")
+                        - filename (optional): Filter by rule filename
+                        - pci_dss, gdpr, hipaa, nist_800_53, tsc, mitre (optional): Compliance filters
+                        - sort, select, q, distinct (optional): Additional filtering
+
+                Example usage:
+                    {"args": {"search": "sysmon"}}
+                    {"args": {"group": "windows", "level": "4"}}
+                    {"args": {"status": "enabled", "mitre": "T1055"}}
+                    {"args": {"filename": ["0020-syslog_rules.xml"]}}
+
+                Returns:
+                    JSON list of rules with IDs, descriptions, levels, groups, compliance mappings, etc.
+                """
                 try:
                     client = self._get_client()
                     data = await client.list_rules(
@@ -355,11 +508,76 @@ class WazuhMCPServer:
                     logger.error("Failed to list rules: %s", e)
                     return [{"type": "text", "text": f"Error listing rules: {str(e)}"}]
 
+        if "GetRuleFileContentTool" not in self.config.server.disabled_tools:
+
+            @self.app.tool(
+                name="GetRuleFileContentTool",
+                description="Get the raw XML content of a specific Wazuh rule file. Requires 'filename' in 'args' object. Use 'raw=true' for plain text format. Useful for examining rule definitions and syntax.",
+            )
+            async def get_rule_file_content_tool(args: GetRuleFileContentArgs):
+                """Get the content of a specific rule file.
+
+                Args:
+                    args: An object containing:
+                        - filename (required): Name of the rule file (e.g., "0020-syslog_rules.xml")
+                        - raw (optional): Format response in plain text (default: false)
+                        - relative_dirname (optional): Filter by relative directory name
+
+                Example usage:
+                    {"args": {"filename": "0020-syslog_rules.xml"}}
+                    {"args": {"filename": "0100-windows_rules.xml", "raw": true}}
+                    {"args": {"filename": "custom_rules.xml", "relative_dirname": "etc/rules"}}
+
+                Returns:
+                    Raw XML content of the rule file or formatted JSON structure.
+                """
+                try:
+                    client = self._get_client()
+                    data = await client.get_rule_file_content(
+                        filename=args.filename,
+                        raw=args.raw,
+                        relative_dirname=args.relative_dirname,
+                    )
+
+                    # Handle different response formats
+                    if args.raw and isinstance(data, dict) and "content" in data:
+                        # For raw responses, return the plain text content directly
+                        return [{"type": "text", "text": self._safe_truncate(data["content"])}]
+                    else:
+                        # For JSON responses, format as JSON
+                        return [
+                            {
+                                "type": "text",
+                                "text": self._safe_truncate(json.dumps(data, indent=2)),
+                            },
+                        ]
+                except Exception as e:
+                    logger.error("Failed to get rule file content: %s", e)
+                    return [
+                        {"type": "text", "text": f"Error retrieving rule file content: {str(e)}"},
+                    ]
+
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
         """Truncate text to avoid overwhelming the client."""
         if len(text) <= max_length:
             return text
         return text[:max_length] + f"\\n\\n[... truncated {len(text) - max_length} characters ...]"
+
+    def _normalize_args(self, raw_args, model_class):
+        """Normalize arguments to handle both direct and wrapped formats."""
+        if isinstance(raw_args, dict):
+            # If it has an 'args' key, use that
+            if "args" in raw_args:
+                return model_class(**raw_args["args"])
+            # Otherwise, assume the dict itself contains the arguments
+            else:
+                return model_class(**raw_args)
+        # If it's already a model instance, return as-is
+        elif hasattr(raw_args, "__dict__"):
+            return raw_args
+        else:
+            # Fallback to empty model
+            return model_class()
 
     def start(self, host: str = None, port: int = None) -> None:
         """Start the MCP server."""
