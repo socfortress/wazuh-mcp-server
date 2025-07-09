@@ -417,3 +417,71 @@ class WazuhClient:
 
         response = await self.request("GET", f"/sca/{agent_id}", params=params)
         return response.json()
+
+    async def get_sca_policy_checks(
+        self,
+        agent_id: str,
+        policy_id: str,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        rationale: Optional[str] = None,
+        remediation: Optional[str] = None,
+        command: Optional[str] = None,
+        reason: Optional[str] = None,
+        file: Optional[str] = None,
+        process: Optional[str] = None,
+        directory: Optional[str] = None,
+        registry: Optional[str] = None,
+        references: Optional[str] = None,
+        result: Optional[str] = None,
+        condition: Optional[str] = None,
+        limit: int = 500,
+        offset: int = 0,
+        sort: Optional[str] = None,
+        search: Optional[str] = None,
+        select: Optional[List[str]] = None,
+        q: Optional[str] = None,
+        distinct: bool = False,
+    ) -> Dict[str, Any]:
+        """Get SCA policy check details for a specific policy on an agent."""
+        params = {"limit": limit, "offset": offset}
+
+        if title:
+            params["title"] = title
+        if description:
+            params["description"] = description
+        if rationale:
+            params["rationale"] = rationale
+        if remediation:
+            params["remediation"] = remediation
+        if command:
+            params["command"] = command
+        if reason:
+            params["reason"] = reason
+        if file:
+            params["file"] = file
+        if process:
+            params["process"] = process
+        if directory:
+            params["directory"] = directory
+        if registry:
+            params["registry"] = registry
+        if references:
+            params["references"] = references
+        if result:
+            params["result"] = result
+        if condition:
+            params["condition"] = condition
+        if sort:
+            params["sort"] = sort
+        if search:
+            params["search"] = search
+        if select:
+            params["select"] = ",".join(select)
+        if q:
+            params["q"] = q
+        if distinct:
+            params["distinct"] = distinct
+
+        response = await self.request("GET", f"/sca/{agent_id}/checks/{policy_id}", params=params)
+        return response.json()

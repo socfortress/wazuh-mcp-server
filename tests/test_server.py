@@ -204,6 +204,27 @@ class TestWazuhMCPServer:
         tool_names = list(tools.keys())
         assert "GetAgentSCATool" not in tool_names
 
+    @pytest.mark.asyncio
+    async def test_get_sca_policy_checks_tool_registration(self, config):
+        """Test that GetSCAPolicyChecksTool is registered when not disabled."""
+        server = WazuhMCPServer(config)
+
+        # Check that the tool is registered
+        tools = await server.app.get_tools()
+        tool_names = list(tools.keys())
+        assert "GetSCAPolicyChecksTool" in tool_names
+
+    @pytest.mark.asyncio
+    async def test_get_sca_policy_checks_tool_disabled(self, config):
+        """Test that GetSCAPolicyChecksTool is not registered when disabled."""
+        config.server.disabled_tools = ["GetSCAPolicyChecksTool"]
+        server = WazuhMCPServer(config)
+
+        # Check that the tool is not registered
+        tools = await server.app.get_tools()
+        tool_names = list(tools.keys())
+        assert "GetSCAPolicyChecksTool" not in tool_names
+
 
 class TestCreateServer:
     """Test create_server factory function."""
