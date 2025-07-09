@@ -44,7 +44,7 @@ async def main():
     await agent.ainvoke({"input": "Authenticate with Wazuh to get a new JWT token"})
 
     print("\n=== Testing Get Agents ===")
-    await agent.ainvoke({"input": "What ports are open on the piHole agent?"})
+    await agent.ainvoke({"input": "Is python3 installed onto the piHole agent?"})
 
 
 if __name__ == "__main__":

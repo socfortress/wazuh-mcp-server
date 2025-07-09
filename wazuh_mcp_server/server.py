@@ -64,6 +64,27 @@ class GetAgentPortsArgs(BaseModel):
     distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
+class GetAgentPackagesArgs(BaseModel):
+    """Arguments for getting agent packages information."""
+
+    agent_id: str = Field(..., description="Agent ID to get packages from")
+    limit: Optional[int] = Field(500, description="Maximum number of packages to return")
+    offset: Optional[int] = Field(0, description="Offset for pagination")
+    vendor: Optional[str] = Field(None, description="Filter by vendor")
+    name: Optional[str] = Field(None, description="Filter by package name")
+    architecture: Optional[str] = Field(None, description="Filter by architecture")
+    format: Optional[str] = Field(None, description="Filter by file format (e.g., 'deb')")
+    version: Optional[str] = Field(None, description="Filter by package version")
+    sort: Optional[str] = Field(None, description="Sort results by field(s)")
+    search: Optional[str] = Field(
+        None,
+        description="Search for elements containing the specified string",
+    )
+    select: Optional[List[str]] = Field(None, description="Select which fields to return")
+    q: Optional[str] = Field(None, description="Query to filter results by")
+    distinct: Optional[bool] = Field(False, description="Look for distinct values")
+
+
 class WazuhMCPServer:
     """Main MCP server for Wazuh integration."""
 
@@ -172,6 +193,35 @@ class WazuhMCPServer:
                 except Exception as e:
                     logger.error("Failed to get agent ports: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agent ports: {str(e)}"}]
+
+        if "GetAgentPackagesTool" not in self.config.server.disabled_tools:
+
+            @self.app.tool(name="GetAgentPackagesTool")
+            async def get_agent_packages_tool(args: GetAgentPackagesArgs):
+                """Get agents packages information from syscollector."""
+                try:
+                    client = self._get_client()
+                    data = await client.get_agent_packages(
+                        agent_id=args.agent_id,
+                        limit=args.limit,
+                        offset=args.offset,
+                        vendor=args.vendor,
+                        name=args.name,
+                        architecture=args.architecture,
+                        format=args.format,
+                        version=args.version,
+                        sort=args.sort,
+                        search=args.search,
+                        select=args.select,
+                        q=args.q,
+                        distinct=args.distinct,
+                    )
+                    return [
+                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
+                    ]
+                except Exception as e:
+                    logger.error("Failed to get agent packages: %s", e)
+                    return [{"type": "text", "text": f"Error retrieving agent packages: {str(e)}"}]
 
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
         """Truncate text to avoid overwhelming the client."""

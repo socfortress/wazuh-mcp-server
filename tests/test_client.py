@@ -235,3 +235,80 @@ class TestWazuhClient:
             assert c == client
 
         mock_httpx_client.aclose.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_agent_packages_success(self, wazuh_client, mock_httpx_client):
+        """Test successful agent packages retrieval."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock agent packages response
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {
+            "data": {
+                "affected_items": [
+                    {
+                        "name": "openssh-client",
+                        "version": "1:8.2p1-4ubuntu0.2",
+                        "architecture": "amd64",
+                        "format": "deb",
+                        "vendor": "Ubuntu Developers",
+                        "agent_id": "001"
+                    }
+                ],
+                "total_affected_items": 1
+            }
+        }
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.get_agent_packages("001")
+
+        assert "data" in result
+        assert "affected_items" in result["data"]
+        mock_httpx_client.request.assert_called_once_with(
+            "GET", "/syscollector/001/packages",
+            headers={"Authorization": "Bearer test-token"},
+            params={"limit": 500, "offset": 0}
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_agent_packages_with_filters(self, wazuh_client, mock_httpx_client):
+        """Test agent packages retrieval with filters."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock agent packages response
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"data": {"affected_items": []}}
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.get_agent_packages(
+            agent_id="001",
+            vendor="Ubuntu",
+            name="openssh",
+            architecture="amd64",
+            format="deb",
+            limit=100
+        )
+
+        assert "data" in result
+        mock_httpx_client.request.assert_called_once_with(
+            "GET", "/syscollector/001/packages",
+            headers={"Authorization": "Bearer test-token"},
+            params={
+                "limit": 100,
+                "offset": 0,
+                "vendor": "Ubuntu",
+                "name": "openssh",
+                "architecture": "amd64",
+                "format": "deb"
+            }
+        )

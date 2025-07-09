@@ -137,6 +137,71 @@ class WazuhClient:
         response = await self.request("GET", f"/syscollector/{agent_id}/ports", params=params)
         return response.json()
 
+    async def get_agent_packages(
+        self,
+        agent_id: str,
+        limit: int = 500,
+        offset: int = 0,
+        vendor: Optional[str] = None,
+        name: Optional[str] = None,
+        architecture: Optional[str] = None,
+        format: Optional[str] = None,
+        version: Optional[str] = None,
+        sort: Optional[str] = None,
+        search: Optional[str] = None,
+        select: Optional[List[str]] = None,
+        q: Optional[str] = None,
+        distinct: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """Get agent packages information from syscollector.
+
+        Args:
+            agent_id: Agent ID to get packages from
+            limit: Maximum number of packages to return (default: 500)
+            offset: Offset for pagination (default: 0)
+            vendor: Filter by vendor
+            name: Filter by package name
+            architecture: Filter by architecture
+            format: Filter by file format (e.g., 'deb')
+            version: Filter by package version
+            sort: Sort results by field(s)
+            search: Search for elements containing the specified string
+            select: Select which fields to return
+            q: Query to filter results by
+            distinct: Look for distinct values
+
+        Returns:
+            Dict containing agent packages information
+        """
+        params = {
+            "limit": limit,
+            "offset": offset,
+        }
+
+        if vendor:
+            params["vendor"] = vendor
+        if name:
+            params["name"] = name
+        if architecture:
+            params["architecture"] = architecture
+        if format:
+            params["format"] = format
+        if version:
+            params["version"] = version
+        if sort:
+            params["sort"] = sort
+        if search:
+            params["search"] = search
+        if select:
+            params["select"] = ",".join(select)
+        if q:
+            params["q"] = q
+        if distinct:
+            params["distinct"] = distinct
+
+        response = await self.request("GET", f"/syscollector/{agent_id}/packages", params=params)
+        return response.json()
+
     async def authenticate(self) -> Dict[str, Any]:
         """Force token refresh and return status."""
         self._token = None  # Force refresh
