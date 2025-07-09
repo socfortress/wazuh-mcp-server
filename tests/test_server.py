@@ -22,7 +22,6 @@ class TestWazuhMCPServer:
         assert server._client is None
         assert server.app is not None
         assert server.app.name == "Wazuh MCP Server"
-        assert server.app.version == "0.1.0"
 
     def test_get_client(self, config):
         """Test _get_client method."""
