@@ -348,12 +348,20 @@ class WazuhClient:
         params = {}
 
         if raw:
-            params["raw"] = raw
+            params["raw"] = "true"  # Ensure it's a string
         if relative_dirname:
             params["relative_dirname"] = relative_dirname
 
         response = await self.request("GET", f"/rules/files/{filename}", params=params)
-        return response.json()
+
+        # Handle both raw text and JSON responses
+        if raw:
+            # When raw=True, the API returns plain text (XML content)
+            content = response.text  # Get raw text content
+            return {"content": content, "raw": True, "filename": filename}
+        else:
+            # When raw=False (default), the API returns JSON
+            return response.json()
 
     async def authenticate(self) -> Dict[str, Any]:
         """Force token refresh and return status."""

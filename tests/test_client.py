@@ -473,17 +473,17 @@ class TestWazuhClient:
 
     @pytest.mark.asyncio
     async def test_get_rule_file_content_with_options(self, wazuh_client, mock_httpx_client):
-        """Test get_rule_file_content with options."""
+        """Test get_rule_file_content with raw=True option."""
         # Mock token refresh
         mock_auth_response = Mock()
         mock_auth_response.raise_for_status = Mock()
         mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
         mock_httpx_client.post.return_value = mock_auth_response
 
-        # Mock rule file content request
+        # Mock rule file content request for raw response
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json.return_value = {"data": {"affected_items": []}}
+        mock_response.text = "<xml>rule content</xml>"  # Raw XML content
         mock_httpx_client.request.return_value = mock_response
 
         result = await wazuh_client.get_rule_file_content(
@@ -492,13 +492,47 @@ class TestWazuhClient:
             relative_dirname="ruleset/rules",
         )
 
-        assert "data" in result
+        assert "content" in result
+        assert result["content"] == "<xml>rule content</xml>"
+        assert result["raw"] is True
+        assert result["filename"] == "0020-syslog_rules.xml"
         mock_httpx_client.request.assert_called_once_with(
             "GET",
             "/rules/files/0020-syslog_rules.xml",
             headers={"Authorization": "Bearer test-token"},
             params={
-                "raw": True,
+                "raw": "true",  # Should be string
                 "relative_dirname": "ruleset/rules",
             },
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_rule_file_content_raw_format(self, wazuh_client, mock_httpx_client):
+        """Test get_rule_file_content with raw format returning XML."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock rule file content request for raw XML response
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.text = '<?xml version="1.0"?><group name="sysmon"><rule id="60004">...</rule></group>'
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.get_rule_file_content(
+            filename="0575-win-base_rules.xml",
+            raw=True,
+        )
+
+        assert "content" in result
+        assert result["raw"] is True
+        assert result["filename"] == "0575-win-base_rules.xml"
+        assert "<?xml" in result["content"]
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/rules/files/0575-win-base_rules.xml",
+            headers={"Authorization": "Bearer test-token"},
+            params={"raw": "true"},
         )

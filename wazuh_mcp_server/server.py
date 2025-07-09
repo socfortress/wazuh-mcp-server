@@ -522,7 +522,6 @@ class WazuhMCPServer:
                         - filename (required): Name of the rule file (e.g., "0020-syslog_rules.xml")
                         - raw (optional): Format response in plain text (default: false)
                         - relative_dirname (optional): Filter by relative directory name
-                        - select (optional): Select which fields to return (separated by comma). Use '.' for nested fields. For example, '{field1: field2}' may be selected with 'field1.field2'
 
                 Example usage:
                     {"args": {"filename": "0020-syslog_rules.xml"}}
@@ -539,9 +538,18 @@ class WazuhMCPServer:
                         raw=args.raw,
                         relative_dirname=args.relative_dirname,
                     )
-                    return [
-                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
-                    ]
+
+                    # Handle different response formats
+                    if args.raw and isinstance(data, dict) and "content" in data:
+                        # For raw responses, return the plain text content directly
+                        return [
+                            {"type": "text", "text": self._safe_truncate(data["content"])}
+                        ]
+                    else:
+                        # For JSON responses, format as JSON
+                        return [
+                            {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))}
+                        ]
                 except Exception as e:
                     logger.error("Failed to get rule file content: %s", e)
                     return [{"type": "text", "text": f"Error retrieving rule file content: {str(e)}"}]
