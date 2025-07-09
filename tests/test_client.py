@@ -257,11 +257,11 @@ class TestWazuhClient:
                         "architecture": "amd64",
                         "format": "deb",
                         "vendor": "Ubuntu Developers",
-                        "agent_id": "001"
-                    }
+                        "agent_id": "001",
+                    },
                 ],
-                "total_affected_items": 1
-            }
+                "total_affected_items": 1,
+            },
         }
         mock_httpx_client.request.return_value = mock_response
 
@@ -270,9 +270,10 @@ class TestWazuhClient:
         assert "data" in result
         assert "affected_items" in result["data"]
         mock_httpx_client.request.assert_called_once_with(
-            "GET", "/syscollector/001/packages",
+            "GET",
+            "/syscollector/001/packages",
             headers={"Authorization": "Bearer test-token"},
-            params={"limit": 500, "offset": 0}
+            params={"limit": 500, "offset": 0},
         )
 
     @pytest.mark.asyncio
@@ -296,12 +297,13 @@ class TestWazuhClient:
             name="openssh",
             architecture="amd64",
             format="deb",
-            limit=100
+            limit=100,
         )
 
         assert "data" in result
         mock_httpx_client.request.assert_called_once_with(
-            "GET", "/syscollector/001/packages",
+            "GET",
+            "/syscollector/001/packages",
             headers={"Authorization": "Bearer test-token"},
             params={
                 "limit": 100,
@@ -309,6 +311,6 @@ class TestWazuhClient:
                 "vendor": "Ubuntu",
                 "name": "openssh",
                 "architecture": "amd64",
-                "format": "deb"
-            }
+                "format": "deb",
+            },
         )
