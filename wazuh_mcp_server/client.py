@@ -87,7 +87,7 @@ class WazuhClient:
 
     async def get_agent_ports(
         self,
-        agents_list: Optional[List[str]] = None,
+        agent_id: str,
         limit: int = 500,
         offset: int = 0,
         protocol: Optional[str] = None,
@@ -96,13 +96,17 @@ class WazuhClient:
         remote_ip: Optional[str] = None,
         state: Optional[str] = None,
         process: Optional[str] = None,
+        pid: Optional[str] = None,
+        tx_queue: Optional[str] = None,
         sort: Optional[str] = None,
+        search: Optional[str] = None,
+        select: Optional[List[str]] = None,
+        q: Optional[str] = None,
+        distinct: bool = False,
     ) -> Dict[str, Any]:
-        """Get agents ports information from syscollector."""
+        """Get agent ports information from syscollector."""
         params = {"limit": limit, "offset": offset}
 
-        if agents_list:
-            params["agents_list"] = ",".join(agents_list)
         if protocol:
             params["protocol"] = protocol
         if local_ip:
@@ -115,10 +119,22 @@ class WazuhClient:
             params["state"] = state
         if process:
             params["process"] = process
+        if pid:
+            params["pid"] = pid
+        if tx_queue:
+            params["tx_queue"] = tx_queue
         if sort:
             params["sort"] = sort
+        if search:
+            params["search"] = search
+        if select:
+            params["select"] = ",".join(select)
+        if q:
+            params["q"] = q
+        if distinct:
+            params["distinct"] = distinct
 
-        response = await self.request("GET", "/experimental/syscollector/ports", params=params)
+        response = await self.request("GET", f"/syscollector/{agent_id}/ports", params=params)
         return response.json()
 
     async def authenticate(self) -> Dict[str, Any]:

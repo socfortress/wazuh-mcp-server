@@ -269,9 +269,9 @@ The server exposes the following MCP tools:
   - `agent_id` (required): The agent ID to retrieve
 
 ### 4. GetAgentPortsTool
-- **Purpose**: Get network ports information from agents using syscollector
+- **Purpose**: Get network ports information from a specific agent using syscollector
 - **Parameters**:
-  - `agents_list` (optional): List of agent IDs to get ports from (all agents if not specified)
+  - `agent_id` (required): Agent ID to get ports from
   - `limit` (optional): Maximum number of ports to return (default: 500)
   - `offset` (optional): Offset for pagination (default: 0)
   - `protocol` (optional): Filter by protocol (tcp, udp)
@@ -280,7 +280,13 @@ The server exposes the following MCP tools:
   - `remote_ip` (optional): Filter by remote IP address
   - `state` (optional): Filter by state (listening, established, etc.)
   - `process` (optional): Filter by process name
+  - `pid` (optional): Filter by process ID
+  - `tx_queue` (optional): Filter by tx_queue
   - `sort` (optional): Sort results by field(s)
+  - `search` (optional): Search for elements containing the specified string
+  - `select` (optional): Select which fields to return
+  - `q` (optional): Query to filter results by
+  - `distinct` (optional): Look for distinct values
 
 ---
 

@@ -145,8 +145,7 @@ class TestWazuhClient:
                         "local": {"ip": "127.0.0.1", "port": 80},
                         "remote": {"ip": "0.0.0.0", "port": 0},
                         "protocol": "tcp",
-                        "state": "listening",
-                        "agent_id": "000"
+                        "state": "listening"
                     }
                 ],
                 "total_affected_items": 1
@@ -154,12 +153,12 @@ class TestWazuhClient:
         }
         mock_httpx_client.request.return_value = mock_response
 
-        result = await wazuh_client.get_agent_ports()
+        result = await wazuh_client.get_agent_ports("000")
 
         assert "data" in result
         assert "affected_items" in result["data"]
         mock_httpx_client.request.assert_called_once_with(
-            "GET", "/experimental/syscollector/ports",
+            "GET", "/syscollector/000/ports",
             headers={"Authorization": "Bearer test-token"},
             params={"limit": 500, "offset": 0}
         )
@@ -180,7 +179,7 @@ class TestWazuhClient:
         mock_httpx_client.request.return_value = mock_response
 
         result = await wazuh_client.get_agent_ports(
-            agents_list=["000", "001"],
+            agent_id="001",
             protocol="tcp",
             local_ip="127.0.0.1",
             state="listening",
@@ -189,12 +188,11 @@ class TestWazuhClient:
 
         assert "data" in result
         mock_httpx_client.request.assert_called_once_with(
-            "GET", "/experimental/syscollector/ports",
+            "GET", "/syscollector/001/ports",
             headers={"Authorization": "Bearer test-token"},
             params={
                 "limit": 100,
                 "offset": 0,
-                "agents_list": "000,001",
                 "protocol": "tcp",
                 "local.ip": "127.0.0.1",
                 "state": "listening"

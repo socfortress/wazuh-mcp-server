@@ -41,22 +41,24 @@ class GetAgentArgs(BaseModel):
 
 
 class GetAgentPortsArgs(BaseModel):
-    """Arguments for getting agents ports information."""
+    """Arguments for getting agent ports information."""
 
-    agents_list: Optional[List[str]] = Field(
-        None,
-        description="List of agent IDs to get ports from (all agents if not specified)",
-        examples=[["000", "001"]],
-    )
+    agent_id: str = Field(..., description="Agent ID to get ports from")
     limit: Optional[int] = Field(500, description="Maximum number of ports to return")
     offset: Optional[int] = Field(0, description="Offset for pagination")
     protocol: Optional[str] = Field(None, description="Filter by protocol (tcp, udp)")
-    local_ip: Optional[str] = Field(None, description="Filter by local IP address", alias="local.ip")
-    local_port: Optional[str] = Field(None, description="Filter by local port", alias="local.port")
-    remote_ip: Optional[str] = Field(None, description="Filter by remote IP address", alias="remote.ip")
+    local_ip: Optional[str] = Field(None, description="Filter by local IP address")
+    local_port: Optional[str] = Field(None, description="Filter by local port")
+    remote_ip: Optional[str] = Field(None, description="Filter by remote IP address")
     state: Optional[str] = Field(None, description="Filter by state (listening, established, etc.)")
     process: Optional[str] = Field(None, description="Filter by process name")
+    pid: Optional[str] = Field(None, description="Filter by process ID")
+    tx_queue: Optional[str] = Field(None, description="Filter by tx_queue")
     sort: Optional[str] = Field(None, description="Sort results by field(s)")
+    search: Optional[str] = Field(None, description="Search for elements containing the specified string")
+    select: Optional[List[str]] = Field(None, description="Select which fields to return")
+    q: Optional[str] = Field(None, description="Query to filter results by")
+    distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
 class WazuhMCPServer:
@@ -144,7 +146,7 @@ class WazuhMCPServer:
                 try:
                     client = self._get_client()
                     data = await client.get_agent_ports(
-                        agents_list=args.agents_list,
+                        agent_id=args.agent_id,
                         limit=args.limit,
                         offset=args.offset,
                         protocol=args.protocol,
@@ -153,7 +155,13 @@ class WazuhMCPServer:
                         remote_ip=args.remote_ip,
                         state=args.state,
                         process=args.process,
+                        pid=args.pid,
+                        tx_queue=args.tx_queue,
                         sort=args.sort,
+                        search=args.search,
+                        select=args.select,
+                        q=args.q,
+                        distinct=args.distinct,
                     )
                     return [
                         {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
