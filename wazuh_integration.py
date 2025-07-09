@@ -46,7 +46,7 @@ async def main():
     print("\n=== Testing Get Agents ===")
     await agent.ainvoke(
         {
-            "input": "Do I have sysmon related rules installed and what is the raw file of one of these rules?",
+            "input": "What are the SCA results for the piHole agent?Make sure you retrieve the correct agent_id first.",
         },
     )
 

@@ -183,6 +183,27 @@ class TestWazuhMCPServer:
         tool_names = list(tools.keys())
         assert "GetRuleFileContentTool" not in tool_names
 
+    @pytest.mark.asyncio
+    async def test_get_agent_sca_tool_registration(self, config):
+        """Test that GetAgentSCATool is registered when not disabled."""
+        server = WazuhMCPServer(config)
+
+        # Check that the tool is registered
+        tools = await server.app.get_tools()
+        tool_names = list(tools.keys())
+        assert "GetAgentSCATool" in tool_names
+
+    @pytest.mark.asyncio
+    async def test_get_agent_sca_tool_disabled(self, config):
+        """Test that GetAgentSCATool is not registered when disabled."""
+        config.server.disabled_tools = ["GetAgentSCATool"]
+        server = WazuhMCPServer(config)
+
+        # Check that the tool is not registered
+        tools = await server.app.get_tools()
+        tool_names = list(tools.keys())
+        assert "GetAgentSCATool" not in tool_names
+
 
 class TestCreateServer:
     """Test create_server factory function."""

@@ -538,3 +538,65 @@ class TestWazuhClient:
             headers={"Authorization": "Bearer test-token"},
             params={"raw": "true"},
         )
+
+    @pytest.mark.asyncio
+    async def test_get_agent_sca_success(self, wazuh_client, mock_httpx_client):
+        """Test successful get_agent_sca call."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock SCA request
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"data": {"affected_items": []}}
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.get_agent_sca("001")
+
+        assert "data" in result
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/sca/001",
+            headers={"Authorization": "Bearer test-token"},
+            params={"limit": 500, "offset": 0},
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_agent_sca_with_filters(self, wazuh_client, mock_httpx_client):
+        """Test get_agent_sca with various filters."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock SCA request
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"data": {"affected_items": []}}
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.get_agent_sca(
+            agent_id="001",
+            name="CIS benchmark",
+            description="Ubuntu",
+            references="https://www.cisecurity.org",
+            limit=100,
+        )
+
+        assert "data" in result
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/sca/001",
+            headers={"Authorization": "Bearer test-token"},
+            params={
+                "limit": 100,
+                "offset": 0,
+                "name": "CIS benchmark",
+                "description": "Ubuntu",
+                "references": "https://www.cisecurity.org",
+            },
+        )

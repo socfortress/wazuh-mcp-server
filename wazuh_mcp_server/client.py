@@ -380,3 +380,40 @@ class WazuhClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
         await self.close()
+
+    async def get_agent_sca(
+        self,
+        agent_id: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        references: Optional[str] = None,
+        limit: int = 500,
+        offset: int = 0,
+        sort: Optional[str] = None,
+        search: Optional[str] = None,
+        select: Optional[List[str]] = None,
+        q: Optional[str] = None,
+        distinct: bool = False,
+    ) -> Dict[str, Any]:
+        """Get SCA (Security Configuration Assessment) results for an agent."""
+        params = {"limit": limit, "offset": offset}
+
+        if name:
+            params["name"] = name
+        if description:
+            params["description"] = description
+        if references:
+            params["references"] = references
+        if sort:
+            params["sort"] = sort
+        if search:
+            params["search"] = search
+        if select:
+            params["select"] = ",".join(select)
+        if q:
+            params["q"] = q
+        if distinct:
+            params["distinct"] = distinct
+
+        response = await self.request("GET", f"/sca/{agent_id}", params=params)
+        return response.json()
