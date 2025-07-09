@@ -1,19 +1,83 @@
-name: Build and Publish
+name: Build and Publish Package
 
 on:
   push:
     branches:
-      - main  # Trigger on every push to main branch
+      - main
+      - develop
     tags:
-      - 'v*'  # Also trigger on version tags like v1.0.0, v0.1.0, etc.
-  workflow_dispatch:  # Allow manual triggering
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      publish_to_pypi:
+        description: 'Publish to PyPI (only for maintainers)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    
+    - name: Lint with flake8
+      run: |
+        flake8 wazuh_mcp_server --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 wazuh_mcp_server --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+    
+    - name: Check code formatting with black
+      run: |
+        black --check wazuh_mcp_server
+    
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only wazuh_mcp_server
+    
+    - name: Type check with mypy
+      run: |
+        mypy wazuh_mcp_server --ignore-missing-imports
+      continue-on-error: true
+    
+    - name: Test with pytest
+      run: |
+        pytest --cov=wazuh_mcp_server --cov-report=xml --cov-report=term-missing
+      continue-on-error: true
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Needed for version detection
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -23,65 +87,162 @@ jobs:
     - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build twine
+        pip install build twine setuptools wheel
     
-    - name: Build package
+    - name: Build source distribution
       run: |
-        python -m build
+        python -m build --sdist
     
-    - name: Check package
+    - name: Build wheel distribution
+      run: |
+        python -m build --wheel
+    
+    - name: Check built packages
       run: |
         python -m twine check dist/*
+        ls -la dist/
     
-    - name: Test installation
+    - name: Test package installation
       run: |
+        # Create a fresh virtual environment for testing
+        python -m venv test_env
+        source test_env/bin/activate
+        
+        # Install the built wheel
         pip install dist/*.whl
+        
+        # Test imports
         python -c "import wazuh_mcp_server; print('✅ Package imports successfully')"
+        python -c "from wazuh_mcp_server import Config, WazuhClient, WazuhMCPServer; print('✅ Main classes importable')"
+        
+        # Test CLI commands
         python -m wazuh_mcp_server --help
-        wazuh-mcp-server --help
+        wazuh-mcp-server --version
+        
+        # Test with example env vars (should fail gracefully)
+        export WAZUH_PROD_URL=""
+        export WAZUH_PROD_USERNAME=""
+        export WAZUH_PROD_PASSWORD=""
+        python -c "from wazuh_mcp_server import Config; print('✅ Config module works')"
+        
+        deactivate
     
-    - name: Upload artifacts
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: dist
+        name: python-package-distributions
+        path: dist/
+        retention-days: 30
+    
+    - name: Generate package info
+      run: |
+        echo "## Package Information" > package_info.md
+        echo "" >> package_info.md
+        echo "### Built Files" >> package_info.md
+        echo '```' >> package_info.md
+        ls -la dist/ >> package_info.md
+        echo '```' >> package_info.md
+        echo "" >> package_info.md
+        echo "### Installation Commands" >> package_info.md
+        echo '```bash' >> package_info.md
+        echo "# Install from wheel (recommended)" >> package_info.md
+        echo "pip install $(ls dist/*.whl | head -1)" >> package_info.md
+        echo "" >> package_info.md
+        echo "# Install from source distribution" >> package_info.md
+        echo "pip install $(ls dist/*.tar.gz | head -1)" >> package_info.md
+        echo "" >> package_info.md
+        echo "# Install from GitHub" >> package_info.md
+        echo "pip install git+https://github.com/${{ github.repository }}.git" >> package_info.md
+        echo '```' >> package_info.md
+    
+    - name: Upload package info
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-info
+        path: package_info.md
+
+  publish-to-pypi:
+    name: Publish to PyPI
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_to_pypi == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/wazuh-mcp-server
+    permissions:
+      id-token: write
+    
+    steps:
+    - name: Download built packages
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
         path: dist/
     
-    - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        skip-existing: true
+
+  publish-to-github:
+    name: Create GitHub Release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download built packages
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    
+    - name: Download package info
+      uses: actions/download-artifact@v4
+      with:
+        name: package-info
+        path: .
+    
+    - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
           dist/*.whl
           dist/*.tar.gz
-        body: |
-          ## Installation
-          
-          ### From GitHub (recommended)
-          ```bash
-          pip install git+https://github.com/socfortress/wazuh-mcp-server.git
-          ```
-          
-          ### From Release Artifacts
-          Download the `.whl` file from the assets below and install:
-          ```bash
-          pip install wazuh_mcp_server-*.whl
-          ```
-          
-          ## Usage
-          After installation, you can run the server with:
-          ```bash
-          python -m wazuh_mcp_server --transport stream
-          ```
-          
-          Or use the console script:
-          ```bash
-          wazuh-mcp-server --transport stream
-          ```
-          
-          ## What's Changed
-          - Built from commit: ${{ github.sha }}
-          - Tag: ${{ github.ref_name }}
+        body_path: package_info.md
         draft: false
-        prerelease: false
+        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-to-test-pypi:
+    name: Publish to Test PyPI
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/wazuh-mcp-server
+    permissions:
+      id-token: write
+    
+    steps:
+    - name: Download built packages
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    
+    - name: Publish to Test PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        user: __token__
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        skip-existing: true
