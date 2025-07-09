@@ -45,7 +45,7 @@ async def main():
 
     print("\n=== Testing Get Agents ===")
     await agent.ainvoke(
-        {"input": "What processes are running as the root user on the piHole agent?"},
+        {"input": "What sysmon rules is responsible for sysmon network connections?"},
     )
 
 

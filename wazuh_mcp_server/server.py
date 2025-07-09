@@ -115,6 +115,34 @@ class GetAgentProcessesArgs(BaseModel):
     distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
+class ListRulesArgs(BaseModel):
+    """Arguments for listing rules."""
+
+    rule_ids: Optional[List[int]] = Field(None, description="List of rule IDs to filter by")
+    limit: Optional[int] = Field(500, description="Maximum number of rules to return")
+    offset: Optional[int] = Field(0, description="Offset for pagination")
+    select: Optional[List[str]] = Field(None, description="Select which fields to return")
+    sort: Optional[str] = Field(None, description="Sort results by field(s)")
+    search: Optional[str] = Field(
+        None,
+        description="Search for elements containing the specified string",
+    )
+    q: Optional[str] = Field(None, description="Query to filter results by")
+    status: Optional[str] = Field(None, description="Filter by status (enabled, disabled, all)")
+    group: Optional[str] = Field(None, description="Filter by rule group")
+    level: Optional[str] = Field(None, description="Filter by rule level (e.g., '4' or '2-4')")
+    filename: Optional[List[str]] = Field(None, description="Filter by filename")
+    relative_dirname: Optional[str] = Field(None, description="Filter by relative directory name")
+    pci_dss: Optional[str] = Field(None, description="Filter by PCI_DSS requirement")
+    gdpr: Optional[str] = Field(None, description="Filter by GDPR requirement")
+    gpg13: Optional[str] = Field(None, description="Filter by GPG13 requirement")
+    hipaa: Optional[str] = Field(None, description="Filter by HIPAA requirement")
+    nist_800_53: Optional[str] = Field(None, description="Filter by NIST-800-53 requirement")
+    tsc: Optional[str] = Field(None, description="Filter by TSC requirement")
+    mitre: Optional[str] = Field(None, description="Filter by MITRE technique ID")
+    distinct: Optional[bool] = Field(False, description="Look for distinct values")
+
+
 class WazuhMCPServer:
     """Main MCP server for Wazuh integration."""
 
@@ -290,6 +318,42 @@ class WazuhMCPServer:
                 except Exception as e:
                     logger.error("Failed to get agent processes: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agent processes: {str(e)}"}]
+
+        if "ListRulesTool" not in self.config.server.disabled_tools:
+
+            @self.app.tool(name="ListRulesTool")
+            async def list_rules_tool(args: ListRulesArgs):
+                """List rules from Wazuh Manager matching optional filters."""
+                try:
+                    client = self._get_client()
+                    data = await client.list_rules(
+                        rule_ids=args.rule_ids,
+                        limit=args.limit,
+                        offset=args.offset,
+                        select=args.select,
+                        sort=args.sort,
+                        search=args.search,
+                        q=args.q,
+                        status=args.status,
+                        group=args.group,
+                        level=args.level,
+                        filename=args.filename,
+                        relative_dirname=args.relative_dirname,
+                        pci_dss=args.pci_dss,
+                        gdpr=args.gdpr,
+                        gpg13=args.gpg13,
+                        hipaa=args.hipaa,
+                        nist_800_53=args.nist_800_53,
+                        tsc=args.tsc,
+                        mitre=args.mitre,
+                        distinct=args.distinct,
+                    )
+                    return [
+                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
+                    ]
+                except Exception as e:
+                    logger.error("Failed to list rules: %s", e)
+                    return [{"type": "text", "text": f"Error listing rules: {str(e)}"}]
 
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
         """Truncate text to avoid overwhelming the client."""

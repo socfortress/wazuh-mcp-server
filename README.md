@@ -331,6 +331,30 @@ The server exposes the following MCP tools:
   - `q` (optional): Query to filter results by
   - `distinct` (optional): Look for distinct values
 
+### 7. ListRulesTool
+- **Purpose**: List rules from Wazuh Manager with various filtering options
+- **Parameters**:
+  - `rule_ids` (optional): List of rule IDs to filter by
+  - `limit` (optional): Maximum number of rules to return (default: 500)
+  - `offset` (optional): Offset for pagination (default: 0)
+  - `select` (optional): Select which fields to return
+  - `sort` (optional): Sort results by field(s)
+  - `search` (optional): Search for elements containing the specified string
+  - `q` (optional): Query to filter results by
+  - `status` (optional): Filter by status (enabled, disabled, all)
+  - `group` (optional): Filter by rule group
+  - `level` (optional): Filter by rule level (e.g., '4' or '2-4')
+  - `filename` (optional): Filter by filename
+  - `relative_dirname` (optional): Filter by relative directory name
+  - `pci_dss` (optional): Filter by PCI_DSS requirement
+  - `gdpr` (optional): Filter by GDPR requirement
+  - `gpg13` (optional): Filter by GPG13 requirement
+  - `hipaa` (optional): Filter by HIPAA requirement
+  - `nist_800_53` (optional): Filter by NIST-800-53 requirement
+  - `tsc` (optional): Filter by TSC requirement
+  - `mitre` (optional): Filter by MITRE technique ID
+  - `distinct` (optional): Look for distinct values
+
 ---
 
 ## Development
