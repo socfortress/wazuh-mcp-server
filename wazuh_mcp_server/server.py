@@ -170,6 +170,39 @@ class GetAgentSCAArgs(BaseModel):
     distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
+class GetSCAPolicyChecksArgs(BaseModel):
+    """Arguments for getting SCA policy check details."""
+
+    agent_id: str = Field(..., description="Agent ID to get SCA policy checks from")
+    policy_id: str = Field(..., description="Policy ID to get checks for")
+    title: Optional[str] = Field(None, description="Filter by check title")
+    description: Optional[str] = Field(None, description="Filter by check description")
+    rationale: Optional[str] = Field(None, description="Filter by rationale")
+    remediation: Optional[str] = Field(None, description="Filter by remediation")
+    command: Optional[str] = Field(None, description="Filter by command")
+    reason: Optional[str] = Field(None, description="Filter by reason")
+    file: Optional[str] = Field(None, description="Filter by file path")
+    process: Optional[str] = Field(None, description="Filter by process name")
+    directory: Optional[str] = Field(None, description="Filter by directory")
+    registry: Optional[str] = Field(None, description="Filter by registry")
+    references: Optional[str] = Field(None, description="Filter by references")
+    result: Optional[str] = Field(
+        None,
+        description="Filter by result (passed, failed, not_applicable)",
+    )
+    condition: Optional[str] = Field(None, description="Filter by condition")
+    limit: Optional[int] = Field(500, description="Maximum number of checks to return")
+    offset: Optional[int] = Field(0, description="Offset for pagination")
+    sort: Optional[str] = Field(None, description="Sort results by field(s)")
+    search: Optional[str] = Field(
+        None,
+        description="Search for elements containing the specified string",
+    )
+    select: Optional[List[str]] = Field(None, description="Select which fields to return")
+    q: Optional[str] = Field(None, description="Query to filter results by")
+    distinct: Optional[bool] = Field(False, description="Look for distinct values")
+
+
 class WazuhMCPServer:
     """Main MCP server for Wazuh integration."""
 
@@ -624,6 +657,79 @@ class WazuhMCPServer:
                 except Exception as e:
                     logger.error("Failed to get agent SCA: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agent SCA: {str(e)}"}]
+
+        if "GetSCAPolicyChecksTool" not in self.config.server.disabled_tools:
+
+            @self.app.tool(
+                name="GetSCAPolicyChecksTool",
+                description="Get detailed SCA policy check results for a specific policy on a Wazuh agent. Requires agent_id and policy_id in 'args' object. Shows individual security checks with pass/fail status, remediation steps, compliance mappings, etc. Use result filter to focus on failed checks.",
+            )
+            async def get_sca_policy_checks_tool(args: GetSCAPolicyChecksArgs):
+                """Get detailed SCA policy check results for a specific policy.
+
+                Args:
+                    args: An object containing:
+                        - agent_id (required): Agent ID to get SCA policy checks from (e.g., "000", "001")
+                        - policy_id (required): Policy ID to get checks for (e.g., "cis_ubuntu20-04")
+                        - title (optional): Filter by check title
+                        - description (optional): Filter by check description
+                        - rationale (optional): Filter by rationale
+                        - remediation (optional): Filter by remediation steps
+                        - command (optional): Filter by command used for check
+                        - reason (optional): Filter by reason for check result
+                        - file (optional): Filter by file path
+                        - process (optional): Filter by process name
+                        - directory (optional): Filter by directory
+                        - registry (optional): Filter by registry key
+                        - references (optional): Filter by references
+                        - result (optional): Filter by result ("passed", "failed", "not_applicable")
+                        - condition (optional): Filter by condition type
+                        - limit (optional): Maximum number of checks to return (default: 500)
+                        - offset (optional): Offset for pagination (default: 0)
+                        - sort, search, select, q, distinct (optional): Additional filtering
+
+                Example usage:
+                    {"args": {"agent_id": "000", "policy_id": "cis_ubuntu20-04"}}
+                    {"args": {"agent_id": "001", "policy_id": "cis_ubuntu20-04", "result": "failed"}}
+                    {"args": {"agent_id": "000", "policy_id": "cis_ubuntu20-04", "title": "filesystem"}}
+
+                Returns:
+                    JSON list of detailed policy checks with compliance status, remediation, rules, etc.
+                """
+                try:
+                    client = self._get_client()
+                    data = await client.get_sca_policy_checks(
+                        agent_id=args.agent_id,
+                        policy_id=args.policy_id,
+                        title=args.title,
+                        description=args.description,
+                        rationale=args.rationale,
+                        remediation=args.remediation,
+                        command=args.command,
+                        reason=args.reason,
+                        file=args.file,
+                        process=args.process,
+                        directory=args.directory,
+                        registry=args.registry,
+                        references=args.references,
+                        result=args.result,
+                        condition=args.condition,
+                        limit=args.limit,
+                        offset=args.offset,
+                        sort=args.sort,
+                        search=args.search,
+                        select=args.select,
+                        q=args.q,
+                        distinct=args.distinct,
+                    )
+                    return [
+                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
+                    ]
+                except Exception as e:
+                    logger.error("Failed to get SCA policy checks: %s", e)
+                    return [
+                        {"type": "text", "text": f"Error retrieving SCA policy checks: {str(e)}"},
+                    ]
 
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
         """Truncate text to avoid overwhelming the client."""
