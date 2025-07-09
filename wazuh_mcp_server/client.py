@@ -4,7 +4,7 @@ Wazuh API client for MCP server.
 
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 
@@ -83,6 +83,58 @@ class WazuhClient:
     async def get_agent(self, agent_id: str) -> Dict[str, Any]:
         """Get specific agent by ID."""
         response = await self.request("GET", f"/agents/{agent_id}")
+        return response.json()
+
+    async def get_agent_ports(
+        self,
+        agent_id: str,
+        limit: int = 500,
+        offset: int = 0,
+        protocol: Optional[str] = None,
+        local_ip: Optional[str] = None,
+        local_port: Optional[str] = None,
+        remote_ip: Optional[str] = None,
+        state: Optional[str] = None,
+        process: Optional[str] = None,
+        pid: Optional[str] = None,
+        tx_queue: Optional[str] = None,
+        sort: Optional[str] = None,
+        search: Optional[str] = None,
+        select: Optional[List[str]] = None,
+        q: Optional[str] = None,
+        distinct: bool = False,
+    ) -> Dict[str, Any]:
+        """Get agent ports information from syscollector."""
+        params = {"limit": limit, "offset": offset}
+
+        if protocol:
+            params["protocol"] = protocol
+        if local_ip:
+            params["local.ip"] = local_ip
+        if local_port:
+            params["local.port"] = local_port
+        if remote_ip:
+            params["remote.ip"] = remote_ip
+        if state:
+            params["state"] = state
+        if process:
+            params["process"] = process
+        if pid:
+            params["pid"] = pid
+        if tx_queue:
+            params["tx_queue"] = tx_queue
+        if sort:
+            params["sort"] = sort
+        if search:
+            params["search"] = search
+        if select:
+            params["select"] = ",".join(select)
+        if q:
+            params["q"] = q
+        if distinct:
+            params["distinct"] = distinct
+
+        response = await self.request("GET", f"/syscollector/{agent_id}/ports", params=params)
         return response.json()
 
     async def authenticate(self) -> Dict[str, Any]:

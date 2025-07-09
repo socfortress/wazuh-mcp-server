@@ -106,31 +106,101 @@ class TestWazuhClient:
 
     @pytest.mark.asyncio
     async def test_get_agent_success(self, wazuh_client, mock_httpx_client):
-        """Test successful get_agent call."""
+        """Test successful agent retrieval."""
         # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock agent response
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json.return_value = {"data": {"token": "test-token"}}
-        mock_httpx_client.post.return_value = mock_response
-
-        # Mock agent request
-        mock_agent_response = Mock()
-        mock_agent_response.raise_for_status = Mock()
-        mock_agent_response.json.return_value = {
-            "data": {"affected_items": [{"id": "001", "name": "agent1"}]},
-        }
-        mock_httpx_client.request.return_value = mock_agent_response
+        mock_response.json.return_value = {"data": {"id": "001", "name": "test-agent"}}
+        mock_httpx_client.request.return_value = mock_response
 
         result = await wazuh_client.get_agent("001")
 
-        expected_data = {"data": {"affected_items": [{"id": "001", "name": "agent1"}]}}
-        assert result == expected_data
-
-        # Check that request was made with correct URL
+        assert result == {"data": {"id": "001", "name": "test-agent"}}
         mock_httpx_client.request.assert_called_once_with(
             "GET",
             "/agents/001",
             headers={"Authorization": "Bearer test-token"},
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_agent_ports_success(self, wazuh_client, mock_httpx_client):
+        """Test successful agent ports retrieval."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock agent ports response
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {
+            "data": {
+                "affected_items": [
+                    {
+                        "local": {"ip": "127.0.0.1", "port": 80},
+                        "remote": {"ip": "0.0.0.0", "port": 0},
+                        "protocol": "tcp",
+                        "state": "listening",
+                    },
+                ],
+                "total_affected_items": 1,
+            },
+        }
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.get_agent_ports("000")
+
+        assert "data" in result
+        assert "affected_items" in result["data"]
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/syscollector/000/ports",
+            headers={"Authorization": "Bearer test-token"},
+            params={"limit": 500, "offset": 0},
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_agent_ports_with_filters(self, wazuh_client, mock_httpx_client):
+        """Test agent ports retrieval with filters."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock agent ports response
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"data": {"affected_items": []}}
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.get_agent_ports(
+            agent_id="001",
+            protocol="tcp",
+            local_ip="127.0.0.1",
+            state="listening",
+            limit=100,
+        )
+
+        assert "data" in result
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/syscollector/001/ports",
+            headers={"Authorization": "Bearer test-token"},
+            params={
+                "limit": 100,
+                "offset": 0,
+                "protocol": "tcp",
+                "local.ip": "127.0.0.1",
+                "state": "listening",
+            },
         )
 
     @pytest.mark.asyncio
