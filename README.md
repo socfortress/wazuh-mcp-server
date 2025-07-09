@@ -3,8 +3,10 @@
 A production-ready **Model Context Protocol (MCP) server** for seamless integration between Wazuh SIEM and Large Language Models (LLMs).
 
 [![Build Status](https://github.com/socfortress/wazuh-mcp-server/actions/workflows/publish.yml/badge.svg)](https://github.com/socfortress/wazuh-mcp-server/actions)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UC4EUQtTxeC8wGrKRafI6pZg)](https://www.youtube.com/@taylorwalton_socfortress/videos)
+[![Get in Touch](https://img.shields.io/badge/📧%20Get%20in%20Touch-Friendly%20Support%20Awaits!-blue?style=for-the-badge)](https://www.socfortress.co/contact_form.html)
 
 > **Why?**
 > Combine the power of Wazuh's comprehensive security monitoring with the reasoning capabilities of large language models—enabling natural language queries and intelligent analysis of your security data.
@@ -18,7 +20,6 @@ A production-ready **Model Context Protocol (MCP) server** for seamless integrat
 - 🌐 **HTTP/2 Support**: Built on modern async HTTP client with connection pooling
 - 📊 **Comprehensive API**: Access Wazuh agents, authentication, and more
 - 🎛️ **Configurable**: Environment variables, CLI arguments, and fine-grained tool filtering
-- 🐳 **Container-ready**: Easy Docker deployment
 - 📦 **Pip installable**: Install directly from GitHub releases or source
 
 ---
@@ -111,7 +112,7 @@ The server will start and be available at `http://127.0.0.1:8000` (or your confi
 
 ### Requirements
 
-- Python 3.8 or higher
+- Python 3.11 or higher
 - Access to a Wazuh Manager instance
 - Network connectivity to your Wazuh Manager
 
@@ -414,22 +415,6 @@ pytest tests/test_client.py
 pytest -v
 ```
 
-### Code Quality
-
-```bash
-# Format code
-black .
-
-# Sort imports
-isort .
-
-# Lint code
-flake8 wazuh_mcp_server
-
-# Type checking
-mypy wazuh_mcp_server
-```
-
 ### Building the Package
 
 ```bash
@@ -455,7 +440,6 @@ This project uses GitHub Actions for automated building and testing:
 - **Automatic builds**: Every push to `main` and `develop` branches triggers a build
 - **Quality assurance**: Comprehensive testing including linting, type checking, and unit tests
 - **Artifact publishing**: Built packages are available as GitHub releases and workflow artifacts
-- **Multiple Python versions**: Tested on Python 3.11 (expandable to 3.8-3.12)
 
 ### Creating a Release
 
@@ -473,99 +457,6 @@ This project uses GitHub Actions for automated building and testing:
 ### Installing from CI Artifacts
 
 Visit the [Actions page](https://github.com/socfortress/wazuh-mcp-server/actions) and download the `python-package-distributions` artifact from any successful build.
-
----
-
-## Deployment
-
-### Docker
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install the package
-RUN pip install git+https://github.com/socfortress/wazuh-mcp-server.git
-
-# Copy configuration
-COPY .env .env
-
-# Expose port
-EXPOSE 8000
-
-# Run the server
-CMD ["wazuh-mcp-server", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-### Docker Compose
-
-```yaml
-version: '3.8'
-
-services:
-  wazuh-mcp-server:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - WAZUH_PROD_URL=https://your-wazuh-manager:55000
-      - WAZUH_PROD_USERNAME=your-username
-      - WAZUH_PROD_PASSWORD=your-password
-      - WAZUH_PROD_SSL_VERIFY=false
-      - LOG_LEVEL=INFO
-    restart: unless-stopped
-```
-
-### Kubernetes
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: wazuh-mcp-server
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: wazuh-mcp-server
-  template:
-    metadata:
-      labels:
-        app: wazuh-mcp-server
-    spec:
-      containers:
-      - name: wazuh-mcp-server
-        image: wazuh-mcp-server:latest
-        ports:
-        - containerPort: 8000
-        env:
-        - name: WAZUH_PROD_URL
-          value: "https://your-wazuh-manager:55000"
-        - name: WAZUH_PROD_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: wazuh-credentials
-              key: username
-        - name: WAZUH_PROD_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: wazuh-credentials
-              key: password
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: wazuh-mcp-server-service
-spec:
-  selector:
-    app: wazuh-mcp-server
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 8000
-  type: LoadBalancer
-```
 
 ---
 
@@ -665,7 +556,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - 📖 [Documentation](https://github.com/socfortress/wazuh-mcp-server#readme)
 - 🐛 [Issues](https://github.com/socfortress/wazuh-mcp-server/issues)
-- 💬 [Discussions](https://github.com/socfortress/wazuh-mcp-server/discussions)
 - 🏢 [SOCFortress](https://socfortress.co)
 
 ---
