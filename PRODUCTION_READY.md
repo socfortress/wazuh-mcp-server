@@ -5,7 +5,7 @@
 I've successfully transformed your basic `server.py` script into a **production-ready Python package** that can be:
 
 - ✅ **Installed via pip** from built artifacts
-- ✅ **Published to PyPI** (when you're ready)
+- ✅ **Distributed via GitHub releases**
 - ✅ **Distributed via GitHub releases**
 - ✅ **Automatically built and tested** via GitHub Actions
 - ✅ **Containerized** with Docker

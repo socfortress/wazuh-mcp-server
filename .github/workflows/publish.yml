@@ -1,4 +1,4 @@
-name: Build and Publish Package
+name: Build and Release Package
 
 on:
   push:
@@ -12,12 +12,6 @@ on:
       - main
       - develop
   workflow_dispatch:
-    inputs:
-      publish_to_pypi:
-        description: 'Publish to PyPI (only for maintainers)'
-        required: false
-        default: false
-        type: boolean
 
 jobs:
   test:
@@ -136,23 +130,41 @@ jobs:
     
     - name: Generate package info
       run: |
-        echo "## Package Information" > package_info.md
+        echo "## 📦 Wazuh MCP Server Package" > package_info.md
         echo "" >> package_info.md
-        echo "### Built Files" >> package_info.md
+        echo "A production-ready Model Context Protocol server for Wazuh Manager integration." >> package_info.md
+        echo "" >> package_info.md
+        echo "### 🚀 Installation Options" >> package_info.md
+        echo "" >> package_info.md
+        echo "#### Option 1: Install from GitHub Release (Recommended)" >> package_info.md
+        echo '```bash' >> package_info.md
+        echo "# Download and install the wheel file" >> package_info.md
+        echo "wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$(ls dist/*.whl | head -1 | xargs basename)" >> package_info.md
+        echo "pip install $(ls dist/*.whl | head -1 | xargs basename)" >> package_info.md
+        echo '```' >> package_info.md
+        echo "" >> package_info.md
+        echo "#### Option 2: Install directly from GitHub" >> package_info.md
+        echo '```bash' >> package_info.md
+        echo "pip install git+https://github.com/${{ github.repository }}.git@${{ github.ref_name }}" >> package_info.md
+        echo '```' >> package_info.md
+        echo "" >> package_info.md
+        echo "#### Option 3: Install from source" >> package_info.md
+        echo '```bash' >> package_info.md
+        echo "# Download and install the source distribution" >> package_info.md
+        echo "wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$(ls dist/*.tar.gz | head -1 | xargs basename)" >> package_info.md
+        echo "pip install $(ls dist/*.tar.gz | head -1 | xargs basename)" >> package_info.md
+        echo '```' >> package_info.md
+        echo "" >> package_info.md
+        echo "### 🔧 Usage" >> package_info.md
+        echo '```bash' >> package_info.md
+        echo "# Run the server" >> package_info.md
+        echo "wazuh-mcp-server --help" >> package_info.md
+        echo "python -m wazuh_mcp_server --port 8000" >> package_info.md
+        echo '```' >> package_info.md
+        echo "" >> package_info.md
+        echo "### 📋 Built Files" >> package_info.md
         echo '```' >> package_info.md
         ls -la dist/ >> package_info.md
-        echo '```' >> package_info.md
-        echo "" >> package_info.md
-        echo "### Installation Commands" >> package_info.md
-        echo '```bash' >> package_info.md
-        echo "# Install from wheel (recommended)" >> package_info.md
-        echo "pip install $(ls dist/*.whl | head -1)" >> package_info.md
-        echo "" >> package_info.md
-        echo "# Install from source distribution" >> package_info.md
-        echo "pip install $(ls dist/*.tar.gz | head -1)" >> package_info.md
-        echo "" >> package_info.md
-        echo "# Install from GitHub" >> package_info.md
-        echo "pip install git+https://github.com/${{ github.repository }}.git" >> package_info.md
         echo '```' >> package_info.md
     
     - name: Upload package info
@@ -160,31 +172,6 @@ jobs:
       with:
         name: package-info
         path: package_info.md
-
-  publish-to-pypi:
-    name: Publish to PyPI
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_to_pypi == 'true'
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/wazuh-mcp-server
-    permissions:
-      id-token: write
-    
-    steps:
-    - name: Download built packages
-      uses: actions/download-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
-    
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        skip-existing: true
 
   publish-to-github:
     name: Create GitHub Release
@@ -219,18 +206,13 @@ jobs:
         draft: false
         prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
       env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-to-test-pypi:
-    name: Publish to Test PyPI
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+  upload-development-artifacts:
+    name: Upload Development Artifacts
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/wazuh-mcp-server
-    permissions:
-      id-token: write
     
     steps:
     - name: Download built packages
@@ -239,10 +221,35 @@ jobs:
         name: python-package-distributions
         path: dist/
     
-    - name: Publish to Test PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+    - name: Generate development package info
+      run: |
+        echo "## 🚧 Development Build" > dev_package_info.md
+        echo "" >> dev_package_info.md
+        echo "**Branch:** \`${{ github.ref_name }}\`" >> dev_package_info.md
+        echo "**Commit:** \`${{ github.sha }}\`" >> dev_package_info.md
+        echo "**Build Date:** \`$(date -u)\`" >> dev_package_info.md
+        echo "" >> dev_package_info.md
+        echo "### 📦 Installation" >> dev_package_info.md
+        echo '```bash' >> dev_package_info.md
+        echo "# Install latest development version" >> dev_package_info.md
+        echo "pip install git+https://github.com/${{ github.repository }}.git@${{ github.ref_name }}" >> dev_package_info.md
+        echo '```' >> dev_package_info.md
+        echo "" >> dev_package_info.md
+        echo "### 📋 Built Files" >> dev_package_info.md
+        echo '```' >> dev_package_info.md
+        ls -la dist/ >> dev_package_info.md
+        echo '```' >> dev_package_info.md
+    
+    - name: Comment on commit with artifact info
+      uses: actions/github-script@v7
       with:
-        repository-url: https://test.pypi.org/legacy/
-        user: __token__
-        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        skip-existing: true
+        script: |
+          const fs = require('fs');
+          const body = fs.readFileSync('dev_package_info.md', 'utf8');
+          
+          github.rest.repos.createCommitComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            commit_sha: context.sha,
+            body: `## 📦 Development Package Built\n\n${body}\n\n**Artifacts available for 30 days in [Actions](${context.payload.repository.html_url}/actions/runs/${context.runId})**`
+          });
