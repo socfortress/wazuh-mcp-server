@@ -202,6 +202,76 @@ class WazuhClient:
         response = await self.request("GET", f"/syscollector/{agent_id}/packages", params=params)
         return response.json()
 
+    async def get_agent_processes(
+        self,
+        agent_id: str,
+        limit: int = 500,
+        offset: int = 0,
+        pid: Optional[str] = None,
+        state: Optional[str] = None,
+        ppid: Optional[str] = None,
+        egroup: Optional[str] = None,
+        euser: Optional[str] = None,
+        fgroup: Optional[str] = None,
+        name: Optional[str] = None,
+        nlwp: Optional[str] = None,
+        pgrp: Optional[str] = None,
+        priority: Optional[str] = None,
+        rgroup: Optional[str] = None,
+        ruser: Optional[str] = None,
+        sgroup: Optional[str] = None,
+        suser: Optional[str] = None,
+        sort: Optional[str] = None,
+        search: Optional[str] = None,
+        select: Optional[List[str]] = None,
+        q: Optional[str] = None,
+        distinct: bool = False,
+    ) -> Dict[str, Any]:
+        """Get agent processes information."""
+        params = {"limit": limit, "offset": offset}
+
+        if pid:
+            params["pid"] = pid
+        if state:
+            params["state"] = state
+        if ppid:
+            params["ppid"] = ppid
+        if egroup:
+            params["egroup"] = egroup
+        if euser:
+            params["euser"] = euser
+        if fgroup:
+            params["fgroup"] = fgroup
+        if name:
+            params["name"] = name
+        if nlwp:
+            params["nlwp"] = nlwp
+        if pgrp:
+            params["pgrp"] = pgrp
+        if priority:
+            params["priority"] = priority
+        if rgroup:
+            params["rgroup"] = rgroup
+        if ruser:
+            params["ruser"] = ruser
+        if sgroup:
+            params["sgroup"] = sgroup
+        if suser:
+            params["suser"] = suser
+        if sort:
+            params["sort"] = sort
+        if search:
+            params["search"] = search
+        if select:
+            params["select"] = ",".join(select)
+        if q:
+            params["q"] = q
+        if distinct:
+            params["distinct"] = distinct
+
+        response = await self.request("GET", f"/syscollector/{agent_id}/processes", params=params)
+        return response.json()
+
     async def authenticate(self) -> Dict[str, Any]:
         """Force token refresh and return status."""
         self._token = None  # Force refresh
