@@ -14,8 +14,8 @@ def main():
     # Use FastMCP's built-in server
     app = build_app()
     import uvicorn
-    # Use the http_app for standard HTTP requests
-    uvicorn.run(app.http_app, host=args.host, port=args.port, log_level="info")
+    # Use the sse_app for MCP client compatibility
+    uvicorn.run(app.sse_app, host=args.host, port=args.port, log_level="info")
 
 if __name__ == "__main__":
     main()
