@@ -46,7 +46,7 @@ async def main():
     print("\n=== Testing Get Agents ===")
     await agent.ainvoke(
         {
-            "input": "What recommendations would you make for hardening the piHole agent based on the SCA checks and policies?Make sure you retrieve the correct agent_id first.",
+            "input": "Get a list of all agents connected to Wazuh. Include their IDs and statuses.",
         },
     )
 
