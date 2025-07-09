@@ -85,6 +85,36 @@ class GetAgentPackagesArgs(BaseModel):
     distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
+class GetAgentProcessesArgs(BaseModel):
+    """Arguments for getting agent processes information."""
+
+    agent_id: str = Field(..., description="Agent ID to get processes from")
+    limit: Optional[int] = Field(500, description="Maximum number of processes to return")
+    offset: Optional[int] = Field(0, description="Offset for pagination")
+    pid: Optional[str] = Field(None, description="Filter by process PID")
+    state: Optional[str] = Field(None, description="Filter by process state")
+    ppid: Optional[str] = Field(None, description="Filter by process parent PID")
+    egroup: Optional[str] = Field(None, description="Filter by process egroup")
+    euser: Optional[str] = Field(None, description="Filter by process euser")
+    fgroup: Optional[str] = Field(None, description="Filter by process fgroup")
+    name: Optional[str] = Field(None, description="Filter by process name")
+    nlwp: Optional[str] = Field(None, description="Filter by process nlwp")
+    pgrp: Optional[str] = Field(None, description="Filter by process pgrp")
+    priority: Optional[str] = Field(None, description="Filter by process priority")
+    rgroup: Optional[str] = Field(None, description="Filter by process rgroup")
+    ruser: Optional[str] = Field(None, description="Filter by process ruser")
+    sgroup: Optional[str] = Field(None, description="Filter by process sgroup")
+    suser: Optional[str] = Field(None, description="Filter by process suser")
+    sort: Optional[str] = Field(None, description="Sort results by field(s)")
+    search: Optional[str] = Field(
+        None,
+        description="Search for elements containing the specified string",
+    )
+    select: Optional[List[str]] = Field(None, description="Select which fields to return")
+    q: Optional[str] = Field(None, description="Query to filter results by")
+    distinct: Optional[bool] = Field(False, description="Look for distinct values")
+
+
 class WazuhMCPServer:
     """Main MCP server for Wazuh integration."""
 
@@ -222,6 +252,44 @@ class WazuhMCPServer:
                 except Exception as e:
                     logger.error("Failed to get agent packages: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agent packages: {str(e)}"}]
+
+        if "GetAgentProcessesTool" not in self.config.server.disabled_tools:
+
+            @self.app.tool(name="GetAgentProcessesTool")
+            async def get_agent_processes_tool(args: GetAgentProcessesArgs):
+                """Get agents processes information from syscollector."""
+                try:
+                    client = self._get_client()
+                    data = await client.get_agent_processes(
+                        agent_id=args.agent_id,
+                        limit=args.limit,
+                        offset=args.offset,
+                        pid=args.pid,
+                        state=args.state,
+                        ppid=args.ppid,
+                        egroup=args.egroup,
+                        euser=args.euser,
+                        fgroup=args.fgroup,
+                        name=args.name,
+                        nlwp=args.nlwp,
+                        pgrp=args.pgrp,
+                        priority=args.priority,
+                        rgroup=args.rgroup,
+                        ruser=args.ruser,
+                        sgroup=args.sgroup,
+                        suser=args.suser,
+                        sort=args.sort,
+                        search=args.search,
+                        select=args.select,
+                        q=args.q,
+                        distinct=args.distinct,
+                    )
+                    return [
+                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
+                    ]
+                except Exception as e:
+                    logger.error("Failed to get agent processes: %s", e)
+                    return [{"type": "text", "text": f"Error retrieving agent processes: {str(e)}"}]
 
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
         """Truncate text to avoid overwhelming the client."""

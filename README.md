@@ -305,6 +305,32 @@ The server exposes the following MCP tools:
   - `q` (optional): Query to filter results by
   - `distinct` (optional): Look for distinct values
 
+### 6. GetAgentProcessesTool
+- **Purpose**: Get running processes information from a specific agent using syscollector
+- **Parameters**:
+  - `agent_id` (required): Agent ID to get processes from
+  - `limit` (optional): Maximum number of processes to return (default: 500)
+  - `offset` (optional): Offset for pagination (default: 0)
+  - `pid` (optional): Filter by process PID
+  - `state` (optional): Filter by process state
+  - `ppid` (optional): Filter by process parent PID
+  - `egroup` (optional): Filter by process egroup
+  - `euser` (optional): Filter by process euser
+  - `fgroup` (optional): Filter by process fgroup
+  - `name` (optional): Filter by process name
+  - `nlwp` (optional): Filter by process nlwp
+  - `pgrp` (optional): Filter by process pgrp
+  - `priority` (optional): Filter by process priority
+  - `rgroup` (optional): Filter by process rgroup
+  - `ruser` (optional): Filter by process ruser
+  - `sgroup` (optional): Filter by process sgroup
+  - `suser` (optional): Filter by process suser
+  - `sort` (optional): Sort results by field(s)
+  - `search` (optional): Search for elements containing the specified string
+  - `select` (optional): Select which fields to return
+  - `q` (optional): Query to filter results by
+  - `distinct` (optional): Look for distinct values
+
 ---
 
 ## Development
