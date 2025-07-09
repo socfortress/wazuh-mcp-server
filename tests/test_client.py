@@ -378,3 +378,70 @@ class TestWazuhClient:
                 "euser": "root",
             },
         )
+
+    @pytest.mark.asyncio
+    async def test_list_rules_success(self, wazuh_client, mock_httpx_client):
+        """Test successful list_rules call."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock rules request
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"data": {"affected_items": []}}
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.list_rules()
+
+        assert "data" in result
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/rules",
+            headers={"Authorization": "Bearer test-token"},
+            params={"limit": 500, "offset": 0},
+        )
+
+    @pytest.mark.asyncio
+    async def test_list_rules_with_filters(self, wazuh_client, mock_httpx_client):
+        """Test list_rules with various filters."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock rules request
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"data": {"affected_items": []}}
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.list_rules(
+            rule_ids=[1001, 1002],
+            status="enabled",
+            group="authentication",
+            level="5",
+            filename=["0020-syslog_rules.xml"],
+            pci_dss="0.2.4",
+            limit=100,
+        )
+
+        assert "data" in result
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/rules",
+            headers={"Authorization": "Bearer test-token"},
+            params={
+                "limit": 100,
+                "offset": 0,
+                "rule_ids": "1001,1002",
+                "status": "enabled",
+                "group": "authentication",
+                "level": "5",
+                "filename": "0020-syslog_rules.xml",
+                "pci_dss": "0.2.4",
+            },
+        )

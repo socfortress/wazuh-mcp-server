@@ -141,6 +141,27 @@ class TestWazuhMCPServer:
         tool_names = list(tools.keys())
         assert "GetAgentProcessesTool" not in tool_names
 
+    @pytest.mark.asyncio
+    async def test_list_rules_tool_registration(self, config):
+        """Test that ListRulesTool is registered when not disabled."""
+        server = WazuhMCPServer(config)
+
+        # Check that the tool is registered
+        tools = await server.app.get_tools()
+        tool_names = list(tools.keys())
+        assert "ListRulesTool" in tool_names
+
+    @pytest.mark.asyncio
+    async def test_list_rules_tool_disabled(self, config):
+        """Test that ListRulesTool is not registered when disabled."""
+        config.server.disabled_tools = ["ListRulesTool"]
+        server = WazuhMCPServer(config)
+
+        # Check that the tool is not registered
+        tools = await server.app.get_tools()
+        tool_names = list(tools.keys())
+        assert "ListRulesTool" not in tool_names
+
 
 class TestCreateServer:
     """Test create_server factory function."""

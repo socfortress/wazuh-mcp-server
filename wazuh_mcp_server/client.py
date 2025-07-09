@@ -272,6 +272,72 @@ class WazuhClient:
         response = await self.request("GET", f"/syscollector/{agent_id}/processes", params=params)
         return response.json()
 
+    async def list_rules(
+        self,
+        rule_ids: Optional[List[int]] = None,
+        limit: int = 500,
+        offset: int = 0,
+        select: Optional[List[str]] = None,
+        sort: Optional[str] = None,
+        search: Optional[str] = None,
+        q: Optional[str] = None,
+        status: Optional[str] = None,
+        group: Optional[str] = None,
+        level: Optional[str] = None,
+        filename: Optional[List[str]] = None,
+        relative_dirname: Optional[str] = None,
+        pci_dss: Optional[str] = None,
+        gdpr: Optional[str] = None,
+        gpg13: Optional[str] = None,
+        hipaa: Optional[str] = None,
+        nist_800_53: Optional[str] = None,
+        tsc: Optional[str] = None,
+        mitre: Optional[str] = None,
+        distinct: Optional[bool] = False,
+    ) -> Dict[str, Any]:
+        """Get rules from Wazuh Manager."""
+        params = {"limit": limit, "offset": offset}
+
+        if rule_ids:
+            params["rule_ids"] = ",".join(map(str, rule_ids))
+        if select:
+            params["select"] = ",".join(select)
+        if sort:
+            params["sort"] = sort
+        if search:
+            params["search"] = search
+        if q:
+            params["q"] = q
+        if status:
+            params["status"] = status
+        if group:
+            params["group"] = group
+        if level:
+            params["level"] = level
+        if filename:
+            params["filename"] = ",".join(filename)
+        if relative_dirname:
+            params["relative_dirname"] = relative_dirname
+        if pci_dss:
+            params["pci_dss"] = pci_dss
+        if gdpr:
+            params["gdpr"] = gdpr
+        if gpg13:
+            params["gpg13"] = gpg13
+        if hipaa:
+            params["hipaa"] = hipaa
+        if nist_800_53:
+            params["nist-800-53"] = nist_800_53
+        if tsc:
+            params["tsc"] = tsc
+        if mitre:
+            params["mitre"] = mitre
+        if distinct:
+            params["distinct"] = distinct
+
+        response = await self.request("GET", "/rules", params=params)
+        return response.json()
+
     async def authenticate(self) -> Dict[str, Any]:
         """Force token refresh and return status."""
         self._token = None  # Force refresh
