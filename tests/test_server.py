@@ -78,6 +78,27 @@ class TestWazuhMCPServer:
         # Should not raise an exception
         await server.close()
 
+    @pytest.mark.asyncio
+    async def test_get_agent_ports_tool_registration(self, config):
+        """Test that GetAgentPortsTool is registered when not disabled."""
+        server = WazuhMCPServer(config)
+
+        # Check that the tool is registered
+        tools = await server.app.get_tools()
+        tool_names = list(tools.keys())
+        assert "GetAgentPortsTool" in tool_names
+
+    @pytest.mark.asyncio
+    async def test_get_agent_ports_tool_disabled(self, config):
+        """Test that GetAgentPortsTool is not registered when disabled."""
+        config.server.disabled_tools = ["GetAgentPortsTool"]
+        server = WazuhMCPServer(config)
+
+        # Check that the tool is not registered
+        tools = await server.app.get_tools()
+        tool_names = list(tools.keys())
+        assert "GetAgentPortsTool" not in tool_names
+
 
 class TestCreateServer:
     """Test create_server factory function."""

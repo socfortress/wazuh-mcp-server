@@ -40,6 +40,25 @@ class GetAgentArgs(BaseModel):
     agent_id: str = Field(..., description="The agent ID to retrieve")
 
 
+class GetAgentPortsArgs(BaseModel):
+    """Arguments for getting agents ports information."""
+
+    agents_list: Optional[List[str]] = Field(
+        None,
+        description="List of agent IDs to get ports from (all agents if not specified)",
+        examples=[["000", "001"]],
+    )
+    limit: Optional[int] = Field(500, description="Maximum number of ports to return")
+    offset: Optional[int] = Field(0, description="Offset for pagination")
+    protocol: Optional[str] = Field(None, description="Filter by protocol (tcp, udp)")
+    local_ip: Optional[str] = Field(None, description="Filter by local IP address", alias="local.ip")
+    local_port: Optional[str] = Field(None, description="Filter by local port", alias="local.port")
+    remote_ip: Optional[str] = Field(None, description="Filter by remote IP address", alias="remote.ip")
+    state: Optional[str] = Field(None, description="Filter by state (listening, established, etc.)")
+    process: Optional[str] = Field(None, description="Filter by process name")
+    sort: Optional[str] = Field(None, description="Sort results by field(s)")
+
+
 class WazuhMCPServer:
     """Main MCP server for Wazuh integration."""
 
@@ -116,6 +135,32 @@ class WazuhMCPServer:
                             "text": f"Error retrieving agent {args.agent_id}: {str(e)}",
                         },
                     ]
+
+        if "GetAgentPortsTool" not in self.config.server.disabled_tools:
+
+            @self.app.tool(name="GetAgentPortsTool")
+            async def get_agent_ports_tool(args: GetAgentPortsArgs):
+                """Get agents ports information from syscollector."""
+                try:
+                    client = self._get_client()
+                    data = await client.get_agent_ports(
+                        agents_list=args.agents_list,
+                        limit=args.limit,
+                        offset=args.offset,
+                        protocol=args.protocol,
+                        local_ip=args.local_ip,
+                        local_port=args.local_port,
+                        remote_ip=args.remote_ip,
+                        state=args.state,
+                        process=args.process,
+                        sort=args.sort,
+                    )
+                    return [
+                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
+                    ]
+                except Exception as e:
+                    logger.error("Failed to get agent ports: %s", e)
+                    return [{"type": "text", "text": f"Error retrieving agent ports: {str(e)}"}]
 
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
         """Truncate text to avoid overwhelming the client."""

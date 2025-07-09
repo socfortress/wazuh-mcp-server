@@ -238,6 +238,11 @@ agent = initialize_agent(
 response = await agent.ainvoke({
     "input": "Show me all active agents and their status"
 })
+
+# Get network ports information
+ports_response = await agent.ainvoke({
+    "input": "Show me all listening TCP ports on agent 000"
+})
 ```
 
 ---
@@ -262,6 +267,20 @@ The server exposes the following MCP tools:
 - **Purpose**: Get specific agent by ID
 - **Parameters**:
   - `agent_id` (required): The agent ID to retrieve
+
+### 4. GetAgentPortsTool
+- **Purpose**: Get network ports information from agents using syscollector
+- **Parameters**:
+  - `agents_list` (optional): List of agent IDs to get ports from (all agents if not specified)
+  - `limit` (optional): Maximum number of ports to return (default: 500)
+  - `offset` (optional): Offset for pagination (default: 0)
+  - `protocol` (optional): Filter by protocol (tcp, udp)
+  - `local_ip` (optional): Filter by local IP address
+  - `local_port` (optional): Filter by local port
+  - `remote_ip` (optional): Filter by remote IP address
+  - `state` (optional): Filter by state (listening, established, etc.)
+  - `process` (optional): Filter by process name
+  - `sort` (optional): Sort results by field(s)
 
 ---
 
