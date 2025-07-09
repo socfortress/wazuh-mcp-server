@@ -445,3 +445,60 @@ class TestWazuhClient:
                 "pci_dss": "0.2.4",
             },
         )
+
+    @pytest.mark.asyncio
+    async def test_get_rule_file_content_success(self, wazuh_client, mock_httpx_client):
+        """Test successful get_rule_file_content call."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock rule file content request
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"data": {"affected_items": []}}
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.get_rule_file_content("0020-syslog_rules.xml")
+
+        assert "data" in result
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/rules/files/0020-syslog_rules.xml",
+            headers={"Authorization": "Bearer test-token"},
+            params={},
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_rule_file_content_with_options(self, wazuh_client, mock_httpx_client):
+        """Test get_rule_file_content with options."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock rule file content request
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"data": {"affected_items": []}}
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.get_rule_file_content(
+            filename="0020-syslog_rules.xml",
+            raw=True,
+            relative_dirname="ruleset/rules",
+        )
+
+        assert "data" in result
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/rules/files/0020-syslog_rules.xml",
+            headers={"Authorization": "Bearer test-token"},
+            params={
+                "raw": True,
+                "relative_dirname": "ruleset/rules",
+            },
+        )

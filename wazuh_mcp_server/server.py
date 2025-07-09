@@ -143,6 +143,14 @@ class ListRulesArgs(BaseModel):
     distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
+class GetRuleFileContentArgs(BaseModel):
+    """Arguments for getting rule file content."""
+
+    filename: str = Field(..., description="Filename of the rule file to get content from")
+    raw: Optional[bool] = Field(False, description="Format response in plain text")
+    relative_dirname: Optional[str] = Field(None, description="Filter by relative directory name")
+
+
 class WazuhMCPServer:
     """Main MCP server for Wazuh integration."""
 
@@ -354,6 +362,25 @@ class WazuhMCPServer:
                 except Exception as e:
                     logger.error("Failed to list rules: %s", e)
                     return [{"type": "text", "text": f"Error listing rules: {str(e)}"}]
+
+        if "GetRuleFileContentTool" not in self.config.server.disabled_tools:
+
+            @self.app.tool(name="GetRuleFileContentTool")
+            async def get_rule_file_content_tool(args: GetRuleFileContentArgs):
+                """Get the content of a specific rule file."""
+                try:
+                    client = self._get_client()
+                    data = await client.get_rule_file_content(
+                        filename=args.filename,
+                        raw=args.raw,
+                        relative_dirname=args.relative_dirname,
+                    )
+                    return [
+                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
+                    ]
+                except Exception as e:
+                    logger.error("Failed to get rule file content: %s", e)
+                    return [{"type": "text", "text": f"Error retrieving rule file content: {str(e)}"}]
 
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
         """Truncate text to avoid overwhelming the client."""
