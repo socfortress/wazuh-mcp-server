@@ -55,7 +55,10 @@ class GetAgentPortsArgs(BaseModel):
     pid: Optional[str] = Field(None, description="Filter by process ID")
     tx_queue: Optional[str] = Field(None, description="Filter by tx_queue")
     sort: Optional[str] = Field(None, description="Sort results by field(s)")
-    search: Optional[str] = Field(None, description="Search for elements containing the specified string")
+    search: Optional[str] = Field(
+        None,
+        description="Search for elements containing the specified string",
+    )
     select: Optional[List[str]] = Field(None, description="Select which fields to return")
     q: Optional[str] = Field(None, description="Query to filter results by")
     distinct: Optional[bool] = Field(False, description="Look for distinct values")

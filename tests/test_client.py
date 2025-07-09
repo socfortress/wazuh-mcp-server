@@ -123,7 +123,9 @@ class TestWazuhClient:
 
         assert result == {"data": {"id": "001", "name": "test-agent"}}
         mock_httpx_client.request.assert_called_once_with(
-            "GET", "/agents/001", headers={"Authorization": "Bearer test-token"}
+            "GET",
+            "/agents/001",
+            headers={"Authorization": "Bearer test-token"},
         )
 
     @pytest.mark.asyncio
@@ -145,11 +147,11 @@ class TestWazuhClient:
                         "local": {"ip": "127.0.0.1", "port": 80},
                         "remote": {"ip": "0.0.0.0", "port": 0},
                         "protocol": "tcp",
-                        "state": "listening"
-                    }
+                        "state": "listening",
+                    },
                 ],
-                "total_affected_items": 1
-            }
+                "total_affected_items": 1,
+            },
         }
         mock_httpx_client.request.return_value = mock_response
 
@@ -158,9 +160,10 @@ class TestWazuhClient:
         assert "data" in result
         assert "affected_items" in result["data"]
         mock_httpx_client.request.assert_called_once_with(
-            "GET", "/syscollector/000/ports",
+            "GET",
+            "/syscollector/000/ports",
             headers={"Authorization": "Bearer test-token"},
-            params={"limit": 500, "offset": 0}
+            params={"limit": 500, "offset": 0},
         )
 
     @pytest.mark.asyncio
@@ -183,20 +186,21 @@ class TestWazuhClient:
             protocol="tcp",
             local_ip="127.0.0.1",
             state="listening",
-            limit=100
+            limit=100,
         )
 
         assert "data" in result
         mock_httpx_client.request.assert_called_once_with(
-            "GET", "/syscollector/001/ports",
+            "GET",
+            "/syscollector/001/ports",
             headers={"Authorization": "Bearer test-token"},
             params={
                 "limit": 100,
                 "offset": 0,
                 "protocol": "tcp",
                 "local.ip": "127.0.0.1",
-                "state": "listening"
-            }
+                "state": "listening",
+            },
         )
 
     @pytest.mark.asyncio
