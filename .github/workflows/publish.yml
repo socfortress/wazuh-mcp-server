@@ -175,7 +175,7 @@ jobs:
 
   publish-to-github:
     name: Create GitHub Release
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -196,15 +196,31 @@ jobs:
         name: package-info
         path: .
 
+    - name: Set release variables
+      id: release-vars
+      run: |
+        if [[ ${{ github.ref }} == refs/tags/v* ]]; then
+          echo "tag_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "release_name=Release ${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}" >> $GITHUB_OUTPUT
+        else
+          # For main branch, create a latest release
+          echo "tag_name=latest" >> $GITHUB_OUTPUT
+          echo "release_name=Latest Development Build" >> $GITHUB_OUTPUT
+          echo "is_prerelease=true" >> $GITHUB_OUTPUT
+        fi
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: ${{ steps.release-vars.outputs.tag_name }}
+        name: ${{ steps.release-vars.outputs.release_name }}
         files: |
           dist/*.whl
           dist/*.tar.gz
         body_path: package_info.md
         draft: false
-        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+        prerelease: ${{ steps.release-vars.outputs.is_prerelease }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
