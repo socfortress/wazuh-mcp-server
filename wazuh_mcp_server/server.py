@@ -151,6 +151,25 @@ class GetRuleFileContentArgs(BaseModel):
     relative_dirname: Optional[str] = Field(None, description="Filter by relative directory name")
 
 
+class GetAgentSCAArgs(BaseModel):
+    """Arguments for getting agent SCA results."""
+
+    agent_id: str = Field(..., description="Agent ID to get SCA results from")
+    name: Optional[str] = Field(None, description="Filter by policy name")
+    description: Optional[str] = Field(None, description="Filter by policy description")
+    references: Optional[str] = Field(None, description="Filter by references")
+    limit: Optional[int] = Field(500, description="Maximum number of SCA policies to return")
+    offset: Optional[int] = Field(0, description="Offset for pagination")
+    sort: Optional[str] = Field(None, description="Sort results by field(s)")
+    search: Optional[str] = Field(
+        None,
+        description="Search for elements containing the specified string",
+    )
+    select: Optional[List[str]] = Field(None, description="Select which fields to return")
+    q: Optional[str] = Field(None, description="Query to filter results by")
+    distinct: Optional[bool] = Field(False, description="Look for distinct values")
+
+
 class WazuhMCPServer:
     """Main MCP server for Wazuh integration."""
 
@@ -556,6 +575,55 @@ class WazuhMCPServer:
                     return [
                         {"type": "text", "text": f"Error retrieving rule file content: {str(e)}"},
                     ]
+
+        if "GetAgentSCATool" not in self.config.server.disabled_tools:
+
+            @self.app.tool(
+                name="GetAgentSCATool",
+                description="Get Security Configuration Assessment (SCA) results for a specific Wazuh agent. Requires agent_id in 'args' object. SCA provides security compliance scanning results for various benchmarks (CIS, PCI DSS, etc.). Optional filters include policy name, description, references.",
+            )
+            async def get_agent_sca_tool(args: GetAgentSCAArgs):
+                """Get SCA (Security Configuration Assessment) results for an agent.
+
+                Args:
+                    args: An object containing:
+                        - agent_id (required): Agent ID to get SCA results from (e.g., "000", "001")
+                        - name (optional): Filter by policy name
+                        - description (optional): Filter by policy description
+                        - references (optional): Filter by references
+                        - limit (optional): Maximum number of SCA policies to return (default: 500)
+                        - offset (optional): Offset for pagination (default: 0)
+                        - sort, search, select, q, distinct (optional): Additional filtering
+
+                Example usage:
+                    {"args": {"agent_id": "000"}}
+                    {"args": {"agent_id": "001", "name": "CIS benchmark"}}
+                    {"args": {"agent_id": "000", "description": "Ubuntu"}}
+
+                Returns:
+                    JSON list of SCA policy results with compliance scores, pass/fail counts, etc.
+                """
+                try:
+                    client = self._get_client()
+                    data = await client.get_agent_sca(
+                        agent_id=args.agent_id,
+                        name=args.name,
+                        description=args.description,
+                        references=args.references,
+                        limit=args.limit,
+                        offset=args.offset,
+                        sort=args.sort,
+                        search=args.search,
+                        select=args.select,
+                        q=args.q,
+                        distinct=args.distinct,
+                    )
+                    return [
+                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
+                    ]
+                except Exception as e:
+                    logger.error("Failed to get agent SCA: %s", e)
+                    return [{"type": "text", "text": f"Error retrieving agent SCA: {str(e)}"}]
 
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
         """Truncate text to avoid overwhelming the client."""

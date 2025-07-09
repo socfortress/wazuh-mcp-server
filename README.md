@@ -362,6 +362,21 @@ The server exposes the following MCP tools:
   - `raw` (optional): Format response in plain text (default: false)
   - `relative_dirname` (optional): Filter by relative directory name
 
+### 9. GetAgentSCATool
+- **Purpose**: Get Security Configuration Assessment (SCA) results for a specific agent
+- **Parameters**:
+  - `agent_id` (required): Agent ID to get SCA results from
+  - `name` (optional): Filter by policy name
+  - `description` (optional): Filter by policy description
+  - `references` (optional): Filter by references
+  - `limit` (optional): Maximum number of SCA policies to return (default: 500)
+  - `offset` (optional): Offset for pagination (default: 0)
+  - `sort` (optional): Sort results by field(s)
+  - `search` (optional): Search for elements containing the specified string
+  - `select` (optional): Select which fields to return
+  - `q` (optional): Query to filter results by
+  - `distinct` (optional): Look for distinct values
+
 ---
 
 ## Development
