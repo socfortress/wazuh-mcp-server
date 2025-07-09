@@ -518,7 +518,9 @@ class TestWazuhClient:
         # Mock rule file content request for raw XML response
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.text = '<?xml version="1.0"?><group name="sysmon"><rule id="60004">...</rule></group>'
+        mock_response.text = (
+            '<?xml version="1.0"?><group name="sysmon"><rule id="60004">...</rule></group>'
+        )
         mock_httpx_client.request.return_value = mock_response
 
         result = await wazuh_client.get_rule_file_content(

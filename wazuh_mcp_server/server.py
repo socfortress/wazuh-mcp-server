@@ -175,7 +175,7 @@ class WazuhMCPServer:
 
             @self.app.tool(
                 name="AuthenticateTool",
-                description="Force a new JWT token acquisition from Wazuh Manager. This tool requires no parameters and will refresh the authentication token for subsequent API calls."
+                description="Force a new JWT token acquisition from Wazuh Manager. This tool requires no parameters and will refresh the authentication token for subsequent API calls.",
             )
             async def authenticate_tool(args: AuthenticateArgs):
                 """Force a new JWT token acquisition from Wazuh Manager.
@@ -203,7 +203,7 @@ class WazuhMCPServer:
 
             @self.app.tool(
                 name="GetAgentsTool",
-                description="Retrieve a list of Wazuh agents with optional filtering. Use this to get information about all agents or filter by status (active, disconnected, never_connected). Parameters should be passed in an 'args' object with 'status', 'limit', and 'offset' fields."
+                description="Retrieve a list of Wazuh agents with optional filtering. Use this to get information about all agents or filter by status (active, disconnected, never_connected). Parameters should be passed in an 'args' object with 'status', 'limit', and 'offset' fields.",
             )
             async def get_agents_tool(args: GetAgentsArgs):
                 """Return agents from Wazuh Manager matching optional filters.
@@ -240,7 +240,7 @@ class WazuhMCPServer:
 
             @self.app.tool(
                 name="GetAgentTool",
-                description="Get detailed information for a specific Wazuh agent by ID. The agent_id parameter is required and should be passed in an 'args' object. Agent IDs are typically 3+ character strings like '000', '001', etc."
+                description="Get detailed information for a specific Wazuh agent by ID. The agent_id parameter is required and should be passed in an 'args' object. Agent IDs are typically 3+ character strings like '000', '001', etc.",
             )
             async def get_agent_tool(args: GetAgentArgs):
                 """Get specific agent by ID.
@@ -275,7 +275,7 @@ class WazuhMCPServer:
 
             @self.app.tool(
                 name="GetAgentPortsTool",
-                description="Get network port information for a specific Wazuh agent from syscollector. Requires agent_id in 'args' object. Optional filters include protocol (tcp/udp), local_ip, local_port, remote_ip, state (listening/established), process name, etc."
+                description="Get network port information for a specific Wazuh agent from syscollector. Requires agent_id in 'args' object. Optional filters include protocol (tcp/udp), local_ip, local_port, remote_ip, state (listening/established), process name, etc.",
             )
             async def get_agent_ports_tool(args: GetAgentPortsArgs):
                 """Get agents ports information from syscollector.
@@ -333,7 +333,7 @@ class WazuhMCPServer:
 
             @self.app.tool(
                 name="GetAgentPackagesTool",
-                description="Get installed package information for a specific Wazuh agent from syscollector. Requires agent_id in 'args' object. Optional filters include vendor, package name, architecture, format (deb/rpm), version, etc."
+                description="Get installed package information for a specific Wazuh agent from syscollector. Requires agent_id in 'args' object. Optional filters include vendor, package name, architecture, format (deb/rpm), version, etc.",
             )
             async def get_agent_packages_tool(args: GetAgentPackagesArgs):
                 """Get agents packages information from syscollector.
@@ -386,7 +386,7 @@ class WazuhMCPServer:
 
             @self.app.tool(
                 name="GetAgentProcessesTool",
-                description="Get running process information for a specific Wazuh agent from syscollector. Requires agent_id in 'args' object. Optional filters include PID, process name, state, user/group information, priority, etc."
+                description="Get running process information for a specific Wazuh agent from syscollector. Requires agent_id in 'args' object. Optional filters include PID, process name, state, user/group information, priority, etc.",
             )
             async def get_agent_processes_tool(args: GetAgentProcessesArgs):
                 """Get agents processes information from syscollector.
@@ -450,7 +450,7 @@ class WazuhMCPServer:
 
             @self.app.tool(
                 name="ListRulesTool",
-                description="List Wazuh detection rules with optional filtering. All parameters should be passed in an 'args' object. Use filters like 'search' for text search, 'group' for rule categories, 'level' for severity, 'status' for enabled/disabled rules, compliance filters (pci_dss, gdpr, hipaa, mitre), etc."
+                description="List Wazuh detection rules with optional filtering. All parameters should be passed in an 'args' object. Use filters like 'search' for text search, 'group' for rule categories, 'level' for severity, 'status' for enabled/disabled rules, compliance filters (pci_dss, gdpr, hipaa, mitre), etc.",
             )
             async def list_rules_tool(args: ListRulesArgs):
                 """List rules from Wazuh Manager matching optional filters.
@@ -512,7 +512,7 @@ class WazuhMCPServer:
 
             @self.app.tool(
                 name="GetRuleFileContentTool",
-                description="Get the raw XML content of a specific Wazuh rule file. Requires 'filename' in 'args' object. Use 'raw=true' for plain text format. Useful for examining rule definitions and syntax."
+                description="Get the raw XML content of a specific Wazuh rule file. Requires 'filename' in 'args' object. Use 'raw=true' for plain text format. Useful for examining rule definitions and syntax.",
             )
             async def get_rule_file_content_tool(args: GetRuleFileContentArgs):
                 """Get the content of a specific rule file.
@@ -542,17 +542,20 @@ class WazuhMCPServer:
                     # Handle different response formats
                     if args.raw and isinstance(data, dict) and "content" in data:
                         # For raw responses, return the plain text content directly
-                        return [
-                            {"type": "text", "text": self._safe_truncate(data["content"])}
-                        ]
+                        return [{"type": "text", "text": self._safe_truncate(data["content"])}]
                     else:
                         # For JSON responses, format as JSON
                         return [
-                            {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))}
+                            {
+                                "type": "text",
+                                "text": self._safe_truncate(json.dumps(data, indent=2)),
+                            },
                         ]
                 except Exception as e:
                     logger.error("Failed to get rule file content: %s", e)
-                    return [{"type": "text", "text": f"Error retrieving rule file content: {str(e)}"}]
+                    return [
+                        {"type": "text", "text": f"Error retrieving rule file content: {str(e)}"},
+                    ]
 
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
         """Truncate text to avoid overwhelming the client."""
@@ -564,13 +567,13 @@ class WazuhMCPServer:
         """Normalize arguments to handle both direct and wrapped formats."""
         if isinstance(raw_args, dict):
             # If it has an 'args' key, use that
-            if 'args' in raw_args:
-                return model_class(**raw_args['args'])
+            if "args" in raw_args:
+                return model_class(**raw_args["args"])
             # Otherwise, assume the dict itself contains the arguments
             else:
                 return model_class(**raw_args)
         # If it's already a model instance, return as-is
-        elif hasattr(raw_args, '__dict__'):
+        elif hasattr(raw_args, "__dict__"):
             return raw_args
         else:
             # Fallback to empty model
