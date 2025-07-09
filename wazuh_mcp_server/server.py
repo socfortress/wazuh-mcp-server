@@ -186,7 +186,10 @@ class GetSCAPolicyChecksArgs(BaseModel):
     directory: Optional[str] = Field(None, description="Filter by directory")
     registry: Optional[str] = Field(None, description="Filter by registry")
     references: Optional[str] = Field(None, description="Filter by references")
-    result: Optional[str] = Field(None, description="Filter by result (passed, failed, not_applicable)")
+    result: Optional[str] = Field(
+        None,
+        description="Filter by result (passed, failed, not_applicable)",
+    )
     condition: Optional[str] = Field(None, description="Filter by condition")
     limit: Optional[int] = Field(500, description="Maximum number of checks to return")
     offset: Optional[int] = Field(0, description="Offset for pagination")
@@ -724,7 +727,9 @@ class WazuhMCPServer:
                     ]
                 except Exception as e:
                     logger.error("Failed to get SCA policy checks: %s", e)
-                    return [{"type": "text", "text": f"Error retrieving SCA policy checks: {str(e)}"}]
+                    return [
+                        {"type": "text", "text": f"Error retrieving SCA policy checks: {str(e)}"},
+                    ]
 
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
         """Truncate text to avoid overwhelming the client."""
