@@ -288,6 +288,23 @@ The server exposes the following MCP tools:
   - `q` (optional): Query to filter results by
   - `distinct` (optional): Look for distinct values
 
+### 5. GetAgentPackagesTool
+- **Purpose**: Get installed packages information from a specific agent using syscollector
+- **Parameters**:
+  - `agent_id` (required): Agent ID to get packages from
+  - `limit` (optional): Maximum number of packages to return (default: 500)
+  - `offset` (optional): Offset for pagination (default: 0)
+  - `vendor` (optional): Filter by package vendor
+  - `name` (optional): Filter by package name
+  - `architecture` (optional): Filter by package architecture
+  - `format` (optional): Filter by package format (e.g., 'deb', 'rpm')
+  - `version` (optional): Filter by package version
+  - `sort` (optional): Sort results by field(s)
+  - `search` (optional): Search for elements containing the specified string
+  - `select` (optional): Select which fields to return
+  - `q` (optional): Query to filter results by
+  - `distinct` (optional): Look for distinct values
+
 ---
 
 ## Development
