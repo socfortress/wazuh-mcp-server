@@ -7,10 +7,10 @@ Usage:
   python server.py
 
 Environment Variables:
-  WAZUH_API_URL     - Wazuh Manager API URL (e.g., https://your-wazuh-manager:55000)
-  WAZUH_USERNAME    - Wazuh username
-  WAZUH_PASSWORD    - Wazuh password
-  WAZUH_SSL_VERIFY  - SSL verification (true/false, default: true)
+  WAZUH_PROD_URL     - Wazuh Manager API URL (e.g., https://your-wazuh-manager:55000)
+  WAZUH_PROD_USERNAME - Wazuh username
+  WAZUH_PROD_PASSWORD - Wazuh password
+  WAZUH_PROD_SSL_VERIFY - SSL verification (true/false, default: true)
 """
 
 import os
@@ -21,6 +21,10 @@ import httpx
 from typing import Optional, List
 from pydantic import BaseModel, Field
 from fastmcp import FastMCP
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -49,14 +53,14 @@ class WazuhClient:
     _expiry: float = 0.0
 
     def __init__(self) -> None:
-        url = os.getenv("WAZUH_API_URL")
-        user = os.getenv("WAZUH_USERNAME")
-        pwd = os.getenv("WAZUH_PASSWORD")
+        url = os.getenv("WAZUH_PROD_URL")
+        user = os.getenv("WAZUH_PROD_USERNAME")
+        pwd = os.getenv("WAZUH_PROD_PASSWORD")
         
         if not all((url, user, pwd)):
-            raise RuntimeError("WAZUH_API_URL, WAZUH_USERNAME, and WAZUH_PASSWORD must be set")
+            raise RuntimeError("WAZUH_PROD_URL, WAZUH_PROD_USERNAME, and WAZUH_PROD_PASSWORD must be set")
 
-        verify = os.getenv("WAZUH_SSL_VERIFY", "true").lower() not in {"0", "false", "no"}
+        verify = os.getenv("WAZUH_PROD_SSL_VERIFY", "true").lower() not in {"0", "false", "no"}
         self._basic = (user, pwd)
         self._cli = httpx.AsyncClient(base_url=url, verify=verify, timeout=30, http2=True)
 
@@ -147,7 +151,7 @@ if __name__ == "__main__":
     import uvicorn
     
     # Check environment variables
-    required_vars = ["WAZUH_API_URL", "WAZUH_USERNAME", "WAZUH_PASSWORD"]
+    required_vars = ["WAZUH_PROD_URL", "WAZUH_PROD_USERNAME", "WAZUH_PROD_PASSWORD"]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     
     if missing_vars:
@@ -156,18 +160,18 @@ if __name__ == "__main__":
         for var in required_vars:
             print(f"  {var}")
         print("\nOptional environment variables:")
-        print("  WAZUH_SSL_VERIFY (default: true)")
+        print("  WAZUH_PROD_SSL_VERIFY (default: true)")
         exit(1)
     
     print("Starting Wazuh MCP Server...")
-    print(f"Wazuh API URL: {os.getenv('WAZUH_API_URL')}")
-    print(f"Username: {os.getenv('WAZUH_USERNAME')}")
-    print(f"SSL Verify: {os.getenv('WAZUH_SSL_VERIFY', 'true')}")
+    print(f"Wazuh API URL: {os.getenv('WAZUH_PROD_URL')}")
+    print(f"Username: {os.getenv('WAZUH_PROD_USERNAME')}")
+    print(f"SSL Verify: {os.getenv('WAZUH_PROD_SSL_VERIFY', 'true')}")
     
     # Start server with SSE transport for LangChain/OpenAI compatibility
     uvicorn.run(
         app.sse_app,
         host="127.0.0.1",
-        port=8000,
+        port=8010,
         log_level="info"
     )

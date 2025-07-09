@@ -16,7 +16,7 @@ async def main():
     client = MultiServerMCPClient({
         "wazuh-mcp-server": {
             "transport": "sse",
-            "url": "http://127.0.0.1:8000/sse/",  # Your Wazuh MCP server SSE endpoint
+            "url": "http://127.0.0.1:8010/sse/",  # Your Wazuh MCP server SSE endpoint
             "headers": {
                 # Add any authentication headers your Wazuh server needs
                 # "Authorization": "Bearer secret-token",
@@ -40,7 +40,7 @@ async def main():
     await agent.ainvoke({"input": "Authenticate with Wazuh to get a new JWT token"})
     
     print("\n=== Testing Get Agents ===")
-    await agent.ainvoke({"input": "List all Wazuh agents"})
+    await agent.ainvoke({"input": "What is the agent ID of piHole?"})
 
 if __name__ == "__main__":
     asyncio.run(main())
