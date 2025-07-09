@@ -5,6 +5,8 @@ A production-ready **Model Context Protocol (MCP) server** for seamless integrat
 [![Build Status](https://github.com/socfortress/wazuh-mcp-server/actions/workflows/publish.yml/badge.svg)](https://github.com/socfortress/wazuh-mcp-server/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UC4EUQtTxeC8wGrKRafI6pZg)](https://www.youtube.com/@taylorwalton_socfortress/videos)
+[![Get in Touch](https://img.shields.io/badge/📧%20Get%20in%20Touch-Friendly%20Support%20Awaits!-blue?style=for-the-badge)](https://www.socfortress.co/contact_form.html)
 
 > **Why?**
 > Combine the power of Wazuh's comprehensive security monitoring with the reasoning capabilities of large language models—enabling natural language queries and intelligent analysis of your security data.
