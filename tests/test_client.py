@@ -105,6 +105,54 @@ class TestWazuhClient:
         )
 
     @pytest.mark.asyncio
+    async def test_get_agents_with_all_parameters(self, wazuh_client, mock_httpx_client):
+        """Test get_agents call with all parameters."""
+        # Mock token refresh
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_response
+
+        # Mock agents request
+        mock_agents_response = Mock()
+        mock_agents_response.raise_for_status = Mock()
+        mock_agents_response.json.return_value = {
+            "data": {"affected_items": [{"id": "001", "name": "agent1"}]},
+        }
+        mock_httpx_client.request.return_value = mock_agents_response
+
+        result = await wazuh_client.get_agents(
+            status=["active"],
+            limit=100,
+            offset=10,
+            sort="name",
+            search="agent",
+            select=["id", "name", "status"],
+            q="name=agent1",
+            distinct=True,
+        )
+
+        expected_data = {"data": {"affected_items": [{"id": "001", "name": "agent1"}]}}
+        assert result == expected_data
+
+        # Check that request was made with correct parameters
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/agents",
+            headers={"Authorization": "Bearer test-token"},
+            params={
+                "status": "active",
+                "limit": 100,
+                "offset": 10,
+                "sort": "name",
+                "search": "agent",
+                "select": "id,name,status",
+                "q": "name=agent1",
+                "distinct": "true",
+            },
+        )
+
+    @pytest.mark.asyncio
     async def test_get_agent_ports_success(self, wazuh_client, mock_httpx_client):
         """Test successful agent ports retrieval."""
         # Mock token refresh

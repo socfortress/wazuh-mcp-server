@@ -70,12 +70,27 @@ class WazuhClient:
         status: Optional[list] = None,
         limit: int = 500,
         offset: int = 0,
+        sort: Optional[str] = None,
+        search: Optional[str] = None,
+        select: Optional[List[str]] = None,
+        q: Optional[str] = None,
+        distinct: bool = False,
     ) -> Dict[str, Any]:
         """Get agents from Wazuh Manager."""
         params = {"limit": limit, "offset": offset}
 
         if status:
             params["status"] = ",".join(status)
+        if sort:
+            params["sort"] = sort
+        if search:
+            params["search"] = search
+        if select:
+            params["select"] = ",".join(select)
+        if q:
+            params["q"] = q
+        if distinct:
+            params["distinct"] = "true"
 
         response = await self.request("GET", "/agents", params=params)
         return response.json()
