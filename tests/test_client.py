@@ -104,29 +104,7 @@ class TestWazuhClient:
             params={"status": "active", "limit": 100, "offset": 0},
         )
 
-    @pytest.mark.asyncio
-    async def test_get_agent_success(self, wazuh_client, mock_httpx_client):
-        """Test successful agent retrieval."""
-        # Mock token refresh
-        mock_auth_response = Mock()
-        mock_auth_response.raise_for_status = Mock()
-        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
-        mock_httpx_client.post.return_value = mock_auth_response
 
-        # Mock agent response
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.json.return_value = {"data": {"id": "001", "name": "test-agent"}}
-        mock_httpx_client.request.return_value = mock_response
-
-        result = await wazuh_client.get_agent("001")
-
-        assert result == {"data": {"id": "001", "name": "test-agent"}}
-        mock_httpx_client.request.assert_called_once_with(
-            "GET",
-            "/agents/001",
-            headers={"Authorization": "Bearer test-token"},
-        )
 
     @pytest.mark.asyncio
     async def test_get_agent_ports_success(self, wazuh_client, mock_httpx_client):

@@ -263,12 +263,8 @@ The server exposes the following MCP tools:
   - `limit` (optional): Maximum number of agents to return (default: 500)
   - `offset` (optional): Offset for pagination (default: 0)
 
-### 3. GetAgentTool
-- **Purpose**: Get specific agent by ID
-- **Parameters**:
-  - `agent_id` (required): The agent ID to retrieve
 
-### 4. GetAgentPortsTool
+### 3. GetAgentPortsTool
 - **Purpose**: Get network ports information from a specific agent using syscollector
 - **Parameters**:
   - `agent_id` (required): Agent ID to get ports from
@@ -288,7 +284,7 @@ The server exposes the following MCP tools:
   - `q` (optional): Query to filter results by
   - `distinct` (optional): Look for distinct values
 
-### 5. GetAgentPackagesTool
+### 4. GetAgentPackagesTool
 - **Purpose**: Get installed packages information from a specific agent using syscollector
 - **Parameters**:
   - `agent_id` (required): Agent ID to get packages from
@@ -305,7 +301,7 @@ The server exposes the following MCP tools:
   - `q` (optional): Query to filter results by
   - `distinct` (optional): Look for distinct values
 
-### 6. GetAgentProcessesTool
+### 5. GetAgentProcessesTool
 - **Purpose**: Get running processes information from a specific agent using syscollector
 - **Parameters**:
   - `agent_id` (required): Agent ID to get processes from
@@ -331,7 +327,7 @@ The server exposes the following MCP tools:
   - `q` (optional): Query to filter results by
   - `distinct` (optional): Look for distinct values
 
-### 7. ListRulesTool
+### 6. ListRulesTool
 - **Purpose**: List rules from Wazuh Manager with various filtering options
 - **Parameters**:
   - `rule_ids` (optional): List of rule IDs to filter by
@@ -355,14 +351,14 @@ The server exposes the following MCP tools:
   - `mitre` (optional): Filter by MITRE technique ID
   - `distinct` (optional): Look for distinct values
 
-### 8. GetRuleFileContentTool
+### 7. GetRuleFileContentTool
 - **Purpose**: Get the content of a specific rule file from the ruleset
 - **Parameters**:
   - `filename` (required): Filename of the rule file to get content from
   - `raw` (optional): Format response in plain text (default: false)
   - `relative_dirname` (optional): Filter by relative directory name
 
-### 9. GetAgentSCATool
+### 8. GetAgentSCATool
 - **Purpose**: Get Security Configuration Assessment (SCA) results for a specific agent
 - **Parameters**:
   - `agent_id` (required): Agent ID to get SCA results from

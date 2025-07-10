@@ -34,10 +34,7 @@ class GetAgentsArgs(BaseModel):
     offset: Optional[int] = Field(0, description="Offset for pagination")
 
 
-class GetAgentArgs(BaseModel):
-    """Arguments for getting a specific agent."""
 
-    agent_id: str = Field(..., description="The agent ID to retrieve")
 
 
 class GetAgentPortsArgs(BaseModel):
@@ -267,6 +264,7 @@ class WazuhMCPServer:
                         - offset (optional): Offset for pagination (default: 0)
 
                 Example usage:
+                    {"args": {"search": "agent_name"}}
                     {"args": {"status": ["active"], "limit": 100}}
                     {"args": {"offset": 50}}
                     {"args": {}} for all agents
@@ -288,40 +286,7 @@ class WazuhMCPServer:
                     logger.error("Failed to get agents: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agents: {str(e)}"}]
 
-        if "GetAgentTool" not in self.config.server.disabled_tools:
 
-            @self.app.tool(
-                name="GetAgentTool",
-                description="Get detailed information for a specific Wazuh agent by ID. The agent_id parameter is required and should be passed in an 'args' object. Agent IDs are typically 3+ character strings like '000', '001', etc.",
-            )
-            async def get_agent_tool(args: GetAgentArgs):
-                """Get specific agent by ID.
-
-                Args:
-                    args: An object containing:
-                        - agent_id (required): The agent ID to retrieve (e.g., "000", "001")
-
-                Example usage:
-                    {"args": {"agent_id": "000"}}
-                    {"args": {"agent_id": "001"}}
-
-                Returns:
-                    JSON object with detailed agent information including status, OS, version, etc.
-                """
-                try:
-                    client = self._get_client()
-                    data = await client.get_agent(args.agent_id)
-                    return [
-                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
-                    ]
-                except Exception as e:
-                    logger.error("Failed to get agent %s: %s", args.agent_id, e)
-                    return [
-                        {
-                            "type": "text",
-                            "text": f"Error retrieving agent {args.agent_id}: {str(e)}",
-                        },
-                    ]
 
         if "GetAgentPortsTool" not in self.config.server.disabled_tools:
 

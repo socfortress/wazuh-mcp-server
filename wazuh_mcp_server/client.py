@@ -80,10 +80,7 @@ class WazuhClient:
         response = await self.request("GET", "/agents", params=params)
         return response.json()
 
-    async def get_agent(self, agent_id: str) -> Dict[str, Any]:
-        """Get specific agent by ID."""
-        response = await self.request("GET", f"/agents/{agent_id}")
-        return response.json()
+
 
     async def get_agent_ports(
         self,
