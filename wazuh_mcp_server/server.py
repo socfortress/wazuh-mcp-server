@@ -32,6 +32,14 @@ class GetAgentsArgs(BaseModel):
     )
     limit: Optional[int] = Field(500, description="Maximum number of agents to return")
     offset: Optional[int] = Field(0, description="Offset for pagination")
+    sort: Optional[str] = Field(None, description="Sort results by field(s)")
+    search: Optional[str] = Field(
+        None,
+        description="Search for elements containing the specified string",
+    )
+    select: Optional[List[str]] = Field(None, description="Select which fields to return")
+    q: Optional[str] = Field(None, description="Query to filter results by")
+    distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
 class GetAgentPortsArgs(BaseModel):
@@ -259,8 +267,14 @@ class WazuhMCPServer:
                         - status (optional): List of strings to filter by agent status (e.g., ["active"])
                         - limit (optional): Maximum number of agents to return (default: 500)
                         - offset (optional): Offset for pagination (default: 0)
+                        - sort (optional): Sort results by field(s) (e.g., "name", "-id")
+                        - search (optional): Search for elements containing the specified string
+                        - select (optional): List of fields to return (e.g., ["id", "name", "status"])
+                        - q (optional): Query to filter results by (e.g., "name=agent_name")
+                        - distinct (optional): Look for distinct values (default: false)
 
                 Example usage:
+                    {"args": {"q": "name=agent_name"}}
                     {"args": {"search": "agent_name"}}
                     {"args": {"status": ["active"], "limit": 100}}
                     {"args": {"offset": 50}}
@@ -275,6 +289,11 @@ class WazuhMCPServer:
                         status=args.status,
                         limit=args.limit,
                         offset=args.offset,
+                        sort=args.sort,
+                        search=args.search,
+                        select=args.select,
+                        q=args.q,
+                        distinct=args.distinct,
                     )
                     return [
                         {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
