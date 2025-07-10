@@ -34,9 +34,6 @@ class GetAgentsArgs(BaseModel):
     offset: Optional[int] = Field(0, description="Offset for pagination")
 
 
-
-
-
 class GetAgentPortsArgs(BaseModel):
     """Arguments for getting agent ports information."""
 
@@ -285,8 +282,6 @@ class WazuhMCPServer:
                 except Exception as e:
                     logger.error("Failed to get agents: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agents: {str(e)}"}]
-
-
 
         if "GetAgentPortsTool" not in self.config.server.disabled_tools:
 

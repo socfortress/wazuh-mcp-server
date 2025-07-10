@@ -104,8 +104,6 @@ class TestWazuhClient:
             params={"status": "active", "limit": 100, "offset": 0},
         )
 
-
-
     @pytest.mark.asyncio
     async def test_get_agent_ports_success(self, wazuh_client, mock_httpx_client):
         """Test successful agent ports retrieval."""

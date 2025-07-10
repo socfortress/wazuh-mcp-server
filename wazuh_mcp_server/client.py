@@ -80,8 +80,6 @@ class WazuhClient:
         response = await self.request("GET", "/agents", params=params)
         return response.json()
 
-
-
     async def get_agent_ports(
         self,
         agent_id: str,
