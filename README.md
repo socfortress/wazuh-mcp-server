@@ -500,7 +500,6 @@ wazuh-mcp-server/
 ├── requirements.txt          # Dependencies
 ├── pyproject.toml           # Package configuration
 ├── .env.example             # Environment template
-├── Dockerfile               # Docker configuration
 └── README.md                # This file
 ```
 
