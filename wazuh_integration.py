@@ -46,7 +46,7 @@ async def main():
     print("\n=== Testing Get Agents ===")
     await agent.ainvoke(
         {
-            "input": "What ports are exposed on the agent? Make sure to get the agent ID first.",
+            "input": "Show me all agents and their IP addresses.",
         },
     )
 
