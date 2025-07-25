@@ -213,10 +213,19 @@ class GetRuleFilesArgs(BaseModel):
     offset: Optional[int] = Field(0, description="First element to return in the collection")
     limit: Optional[int] = Field(500, description="Maximum number of elements to return")
     sort: Optional[str] = Field(None, description="Sort the collection by a field or fields")
-    search: Optional[str] = Field(None, description="Look for elements containing the specified string")
+    search: Optional[str] = Field(
+        None,
+        description="Look for elements containing the specified string",
+    )
     relative_dirname: Optional[str] = Field(None, description="Filter by relative directory name")
-    filename: Optional[List[str]] = Field(None, description="Filter by filename of one or more rule or decoder files")
-    status: Optional[str] = Field(None, description="Filter by list status (enabled, disabled, all)")
+    filename: Optional[List[str]] = Field(
+        None,
+        description="Filter by filename of one or more rule or decoder files",
+    )
+    status: Optional[str] = Field(
+        None,
+        description="Filter by list status (enabled, disabled, all)",
+    )
     q: Optional[str] = Field(None, description="Query to filter results by")
     select: Optional[List[str]] = Field(None, description="Select which fields to return")
     distinct: Optional[bool] = Field(False, description="Look for distinct values")

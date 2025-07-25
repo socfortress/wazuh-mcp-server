@@ -703,8 +703,16 @@ class TestWazuhClient:
         mock_response.json.return_value = {
             "data": {
                 "affected_items": [
-                    {"file": "0010-rules_config.xml", "relative_dirname": "ruleset/rules", "status": "enabled"},
-                    {"file": "0020-syslog_rules.xml", "relative_dirname": "ruleset/rules", "status": "enabled"},
+                    {
+                        "file": "0010-rules_config.xml",
+                        "relative_dirname": "ruleset/rules",
+                        "status": "enabled",
+                    },
+                    {
+                        "file": "0020-syslog_rules.xml",
+                        "relative_dirname": "ruleset/rules",
+                        "status": "enabled",
+                    },
                 ],
                 "total_affected_items": 2,
                 "total_failed_items": 0,
