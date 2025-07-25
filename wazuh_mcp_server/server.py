@@ -205,6 +205,23 @@ class GetSCAPolicyChecksArgs(BaseModel):
     distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
+class GetRuleFilesArgs(BaseModel):
+    """Arguments for getting rule files."""
+
+    pretty: Optional[bool] = Field(False, description="Show results in human-readable format")
+    wait_for_complete: Optional[bool] = Field(False, description="Disable timeout response")
+    offset: Optional[int] = Field(0, description="First element to return in the collection")
+    limit: Optional[int] = Field(500, description="Maximum number of elements to return")
+    sort: Optional[str] = Field(None, description="Sort the collection by a field or fields")
+    search: Optional[str] = Field(None, description="Look for elements containing the specified string")
+    relative_dirname: Optional[str] = Field(None, description="Filter by relative directory name")
+    filename: Optional[List[str]] = Field(None, description="Filter by filename of one or more rule or decoder files")
+    status: Optional[str] = Field(None, description="Filter by list status (enabled, disabled, all)")
+    q: Optional[str] = Field(None, description="Query to filter results by")
+    select: Optional[List[str]] = Field(None, description="Select which fields to return")
+    distinct: Optional[bool] = Field(False, description="Look for distinct values")
+
+
 class WazuhMCPServer:
     """Main MCP server for Wazuh integration."""
 
@@ -708,6 +725,51 @@ class WazuhMCPServer:
                     logger.error("Failed to get SCA policy checks: %s", e)
                     return [
                         {"type": "text", "text": f"Error retrieving SCA policy checks: {str(e)}"},
+                    ]
+
+        if "GetRuleFilesTool" not in self.config.server.disabled_tools:
+
+            @self.app.tool(
+                name="GetRuleFilesTool",
+                description="Get a list of all rule files and their status from Wazuh Manager. Supports filtering, sorting, and field selection.",
+            )
+            async def get_rule_files_tool(args: GetRuleFilesArgs):
+                """Get rule files from Wazuh Manager.
+
+                Args:
+                    args: An object containing all supported query parameters for /rules/files.
+
+                Example usage:
+                    {"args": {"limit": 10, "status": "enabled"}}
+                    {"args": {"filename": ["0020-syslog_rules.xml"]}}
+                    {"args": {"search": "ruleset"}}
+
+                Returns:
+                    JSON list of rule files with their status and directory info.
+                """
+                try:
+                    client = self._get_client()
+                    data = await client.get_rule_files(
+                        pretty=args.pretty,
+                        wait_for_complete=args.wait_for_complete,
+                        offset=args.offset,
+                        limit=args.limit,
+                        sort=args.sort,
+                        search=args.search,
+                        relative_dirname=args.relative_dirname,
+                        filename=args.filename,
+                        status=args.status,
+                        q=args.q,
+                        select=args.select,
+                        distinct=args.distinct,
+                    )
+                    return [
+                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
+                    ]
+                except Exception as e:
+                    logger.error("Failed to get rule files: %s", e)
+                    return [
+                        {"type": "text", "text": f"Error retrieving rule files: {str(e)}"},
                     ]
 
     def _safe_truncate(self, text: str, max_length: int = 32000) -> str:

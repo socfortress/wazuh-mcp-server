@@ -495,3 +495,43 @@ class WazuhClient:
 
         response = await self.request("GET", f"/sca/{agent_id}/checks/{policy_id}", params=params)
         return response.json()
+
+    async def get_rule_files(
+        self,
+        pretty: Optional[bool] = False,
+        wait_for_complete: Optional[bool] = False,
+        offset: int = 0,
+        limit: int = 500,
+        sort: Optional[str] = None,
+        search: Optional[str] = None,
+        relative_dirname: Optional[str] = None,
+        filename: Optional[List[str]] = None,
+        status: Optional[str] = None,
+        q: Optional[str] = None,
+        select: Optional[List[str]] = None,
+        distinct: Optional[bool] = False,
+    ) -> Dict[str, Any]:
+        """Get rule files from Wazuh Manager."""
+        params = {"limit": limit, "offset": offset}
+        if pretty:
+            params["pretty"] = "true"
+        if wait_for_complete:
+            params["wait_for_complete"] = "true"
+        if sort:
+            params["sort"] = sort
+        if search:
+            params["search"] = search
+        if relative_dirname:
+            params["relative_dirname"] = relative_dirname
+        if filename:
+            params["filename"] = ",".join(filename)
+        if status:
+            params["status"] = status
+        if q:
+            params["q"] = q
+        if select:
+            params["select"] = ",".join(select)
+        if distinct:
+            params["distinct"] = "true"
+        response = await self.request("GET", "/rules/files", params=params)
+        return response.json()
