@@ -687,3 +687,50 @@ class TestWazuhClient:
                 "remediation": "Edit",
             },
         )
+
+    @pytest.mark.asyncio
+    async def test_get_rule_files_success(self, wazuh_client, mock_httpx_client):
+        """Test successful get_rule_files call."""
+        # Mock token refresh
+        mock_auth_response = Mock()
+        mock_auth_response.raise_for_status = Mock()
+        mock_auth_response.json.return_value = {"data": {"token": "test-token"}}
+        mock_httpx_client.post.return_value = mock_auth_response
+
+        # Mock rule files response
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {
+            "data": {
+                "affected_items": [
+                    {
+                        "file": "0010-rules_config.xml",
+                        "relative_dirname": "ruleset/rules",
+                        "status": "enabled",
+                    },
+                    {
+                        "file": "0020-syslog_rules.xml",
+                        "relative_dirname": "ruleset/rules",
+                        "status": "enabled",
+                    },
+                ],
+                "total_affected_items": 2,
+                "total_failed_items": 0,
+                "failed_items": [],
+            },
+            "message": "All rules files were returned",
+            "error": 0,
+        }
+        mock_httpx_client.request.return_value = mock_response
+
+        result = await wazuh_client.get_rule_files(limit=2, status="enabled")
+
+        assert "data" in result
+        assert "affected_items" in result["data"]
+        assert result["data"]["total_affected_items"] == 2
+        mock_httpx_client.request.assert_called_once_with(
+            "GET",
+            "/rules/files",
+            headers={"Authorization": "Bearer test-token"},
+            params={"limit": 2, "offset": 0, "status": "enabled"},
+        )

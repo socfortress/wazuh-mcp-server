@@ -358,7 +358,33 @@ The server exposes the following MCP tools:
   - `raw` (optional): Format response in plain text (default: false)
   - `relative_dirname` (optional): Filter by relative directory name
 
-### 8. GetAgentSCATool
+### 8. GetRuleFilesTool
+- **Purpose**: Get a list of all rule files and their status from Wazuh Manager
+- **Parameters**:
+  - `pretty` (optional): Show results in human-readable format
+  - `wait_for_complete` (optional): Disable timeout response
+  - `offset` (optional): First element to return in the collection (default: 0)
+  - `limit` (optional): Maximum number of elements to return (default: 500)
+  - `sort` (optional): Sort the collection by a field or fields
+  - `search` (optional): Look for elements containing the specified string
+  - `relative_dirname` (optional): Filter by relative directory name
+  - `filename` (optional): Filter by filename of one or more rule or decoder files
+  - `status` (optional): Filter by list status (enabled, disabled, all)
+  - `q` (optional): Query to filter results by
+  - `select` (optional): Select which fields to return
+  - `distinct` (optional): Look for distinct values
+
+**Example usage:**
+```python
+{"args": {"limit": 10, "status": "enabled"}}
+{"args": {"filename": ["0020-syslog_rules.xml"]}}
+{"args": {"search": "ruleset"}}
+```
+
+**Returns:**
+- JSON list of rule files with their status and directory info
+
+### 9. GetAgentSCATool
 - **Purpose**: Get Security Configuration Assessment (SCA) results for a specific agent
 - **Parameters**:
   - `agent_id` (required): Agent ID to get SCA results from
