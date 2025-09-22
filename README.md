@@ -210,39 +210,51 @@ server = create_server(config)
 ### Integration with LangChain
 
 ```python
+import asyncio
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_openai import ChatOpenAI
 from langchain.agents import AgentType, initialize_agent
 
-# Initialize LLM
-model = ChatOpenAI(model="gpt-4")
+async def main():
+    # Initialize LLM with hardcoded API key
+    model = ChatOpenAI(
+        model="gpt-4",
+        api_key="sk-your-api-key"  # <-- replace with your actual key
+    )
 
-# Connect to Wazuh MCP server
-client = MultiServerMCPClient({
-    "wazuh-mcp-server": {
-        "transport": "sse",
-        "url": "http://127.0.0.1:8000/sse/",
-    }
-})
+    # Connect to Wazuh MCP server
+    client = MultiServerMCPClient({
+        "wazuh-mcp-server": {
+            "transport": "sse",
+            "url": "http://127.0.0.1:8000/sse/",
+        }
+    })
 
-# Get tools and create agent
-tools = await client.get_tools()
-agent = initialize_agent(
-    tools=tools,
-    llm=model,
-    agent=AgentType.OPENAI_FUNCTIONS,
-    verbose=True
-)
+    # Get tools and create agent
+    tools = await client.get_tools()
+    agent = initialize_agent(
+        tools=tools,
+        llm=model,
+        agent=AgentType.OPENAI_FUNCTIONS,
+        verbose=True
+    )
 
-# Query your Wazuh data
-response = await agent.ainvoke({
-    "input": "Show me all active agents and their status"
-})
+    # Query your Wazuh data
+    response = await agent.ainvoke({
+        "input": "Show me all active agents and their status"
+    })
+    print("Active agents response:")
+    print(response)
 
-# Get network ports information
-ports_response = await agent.ainvoke({
-    "input": "Show me all listening TCP ports on agent 000"
-})
+    # Get network ports information
+    ports_response = await agent.ainvoke({
+        "input": "Show me all listening TCP ports on agent 000"
+    })
+    print("Ports response:")
+    print(ports_response)
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
 ---
