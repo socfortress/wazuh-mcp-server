@@ -100,7 +100,7 @@ wazuh-mcp-server
 python -m wazuh_mcp_server
 
 # With custom configuration
-wazuh-mcp-server --host 0.0.0.0 --port 8080 --log-level DEBUG
+wazuh-mcp-server --host 0.0.0.0 --port 8000 --log-level DEBUG
 ```
 
 The server will start and be available at `http://127.0.0.1:8000` (or your configured host/port).
