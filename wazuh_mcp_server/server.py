@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple
 
 import uvicorn
 from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 from pydantic import BaseModel, Field
 from starlette.middleware import Middleware
 from starlette.requests import Request
@@ -35,7 +36,7 @@ class GetAgentsArgs(BaseModel):
         description="Filter by agent status",
         examples=[["active"]],
     )
-    limit: Optional[int] = Field(500, description="Maximum number of agents to return")
+    limit: Optional[int] = Field(50, description="Maximum number of agents to return")
     offset: Optional[int] = Field(0, description="Offset for pagination")
     sort: Optional[str] = Field(None, description="Sort results by field(s)")
     search: Optional[str] = Field(
@@ -51,7 +52,7 @@ class GetAgentPortsArgs(BaseModel):
     """Arguments for getting agent ports information."""
 
     agent_id: str = Field(..., description="Agent ID to get ports from")
-    limit: Optional[int] = Field(500, description="Maximum number of ports to return")
+    limit: Optional[int] = Field(50, description="Maximum number of ports to return")
     offset: Optional[int] = Field(0, description="Offset for pagination")
     protocol: Optional[str] = Field(None, description="Filter by protocol (tcp, udp)")
     local_ip: Optional[str] = Field(None, description="Filter by local IP address")
@@ -75,7 +76,7 @@ class GetAgentPackagesArgs(BaseModel):
     """Arguments for getting agent packages information."""
 
     agent_id: str = Field(..., description="Agent ID to get packages from")
-    limit: Optional[int] = Field(500, description="Maximum number of packages to return")
+    limit: Optional[int] = Field(50, description="Maximum number of packages to return")
     offset: Optional[int] = Field(0, description="Offset for pagination")
     vendor: Optional[str] = Field(None, description="Filter by vendor")
     name: Optional[str] = Field(None, description="Filter by package name")
@@ -96,7 +97,7 @@ class GetAgentProcessesArgs(BaseModel):
     """Arguments for getting agent processes information."""
 
     agent_id: str = Field(..., description="Agent ID to get processes from")
-    limit: Optional[int] = Field(500, description="Maximum number of processes to return")
+    limit: Optional[int] = Field(50, description="Maximum number of processes to return")
     offset: Optional[int] = Field(0, description="Offset for pagination")
     pid: Optional[str] = Field(None, description="Filter by process PID")
     state: Optional[str] = Field(None, description="Filter by process state")
@@ -126,7 +127,7 @@ class ListRulesArgs(BaseModel):
     """Arguments for listing rules."""
 
     rule_ids: Optional[List[int]] = Field(None, description="List of rule IDs to filter by")
-    limit: Optional[int] = Field(500, description="Maximum number of rules to return")
+    limit: Optional[int] = Field(50, description="Maximum number of rules to return")
     offset: Optional[int] = Field(0, description="Offset for pagination")
     select: Optional[List[str]] = Field(None, description="Select which fields to return")
     sort: Optional[str] = Field(None, description="Sort results by field(s)")
@@ -165,7 +166,7 @@ class GetAgentSCAArgs(BaseModel):
     name: Optional[str] = Field(None, description="Filter by policy name")
     description: Optional[str] = Field(None, description="Filter by policy description")
     references: Optional[str] = Field(None, description="Filter by references")
-    limit: Optional[int] = Field(500, description="Maximum number of SCA policies to return")
+    limit: Optional[int] = Field(50, description="Maximum number of SCA policies to return")
     offset: Optional[int] = Field(0, description="Offset for pagination")
     sort: Optional[str] = Field(None, description="Sort results by field(s)")
     search: Optional[str] = Field(
@@ -198,7 +199,7 @@ class GetSCAPolicyChecksArgs(BaseModel):
         description="Filter by result (passed, failed, not_applicable)",
     )
     condition: Optional[str] = Field(None, description="Filter by condition")
-    limit: Optional[int] = Field(500, description="Maximum number of checks to return")
+    limit: Optional[int] = Field(50, description="Maximum number of checks to return")
     offset: Optional[int] = Field(0, description="Offset for pagination")
     sort: Optional[str] = Field(None, description="Sort results by field(s)")
     search: Optional[str] = Field(
@@ -216,7 +217,7 @@ class GetRuleFilesArgs(BaseModel):
     pretty: Optional[bool] = Field(False, description="Show results in human-readable format")
     wait_for_complete: Optional[bool] = Field(False, description="Disable timeout response")
     offset: Optional[int] = Field(0, description="First element to return in the collection")
-    limit: Optional[int] = Field(500, description="Maximum number of elements to return")
+    limit: Optional[int] = Field(50, description="Maximum number of elements to return")
     sort: Optional[str] = Field(None, description="Sort the collection by a field or fields")
     search: Optional[str] = Field(
         None,
@@ -288,7 +289,7 @@ class WazuhMCPServer:
     def __init__(self, config: Config) -> None:
         self.config = config
         self._client: Optional[WazuhClient] = None
-        self.app = FastMCP(name="Wazuh MCP Server", version="0.1.0")
+        self.app = FastMCP(name="Wazuh MCP Server", version="0.2.0")
 
         # Register tools
         self._register_tools()
@@ -336,15 +337,10 @@ class WazuhMCPServer:
                 try:
                     client = self._get_client()
                     result = await client.authenticate()
-                    return [
-                        {
-                            "type": "text",
-                            "text": f"Authentication successful: {json.dumps(result)}",
-                        },
-                    ]
+                    return f"Authentication successful: {json.dumps(result)}"
                 except Exception as e:
                     logger.error("Authentication failed: %s", e)
-                    return [{"type": "text", "text": f"Authentication failed: {str(e)}"}]
+                    raise ToolError(f"Authentication failed: {str(e)}") from e
 
         if self._enabled("GetAgentsTool"):
 
@@ -358,7 +354,7 @@ class WazuhMCPServer:
                 Args:
                     args: An object containing:
                         - status (optional): List of strings to filter by agent status (e.g., ["active"])
-                        - limit (optional): Maximum number of agents to return (default: 500)
+                        - limit (optional): Maximum number of agents to return (default: 50)
                         - offset (optional): Offset for pagination (default: 0)
                         - sort (optional): Sort results by field(s) (e.g., "name", "-id")
                         - search (optional): Search for elements containing the specified string
@@ -388,12 +384,10 @@ class WazuhMCPServer:
                         q=args.q,
                         distinct=args.distinct,
                     )
-                    return [
-                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
-                    ]
+                    return self._format(data)
                 except Exception as e:
                     logger.error("Failed to get agents: %s", e)
-                    return [{"type": "text", "text": f"Error retrieving agents: {str(e)}"}]
+                    raise ToolError(f"Error retrieving agents: {str(e)}") from e
 
         if self._enabled("GetAgentPortsTool"):
 
@@ -407,7 +401,7 @@ class WazuhMCPServer:
                 Args:
                     args: An object containing:
                         - agent_id (required): Agent ID to get ports from (e.g., "000", "001")
-                        - limit (optional): Maximum number of ports to return (default: 500)
+                        - limit (optional): Maximum number of ports to return (default: 50)
                         - offset (optional): Offset for pagination (default: 0)
                         - protocol (optional): Filter by protocol ("tcp", "udp")
                         - local_ip (optional): Filter by local IP address
@@ -446,12 +440,10 @@ class WazuhMCPServer:
                         q=args.q,
                         distinct=args.distinct,
                     )
-                    return [
-                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
-                    ]
+                    return self._format(data)
                 except Exception as e:
                     logger.error("Failed to get agent ports: %s", e)
-                    return [{"type": "text", "text": f"Error retrieving agent ports: {str(e)}"}]
+                    raise ToolError(f"Error retrieving agent ports: {str(e)}") from e
 
         if self._enabled("GetAgentPackagesTool"):
 
@@ -465,7 +457,7 @@ class WazuhMCPServer:
                 Args:
                     args: An object containing:
                         - agent_id (required): Agent ID to get packages from (e.g., "000", "001")
-                        - limit (optional): Maximum number of packages to return (default: 500)
+                        - limit (optional): Maximum number of packages to return (default: 50)
                         - offset (optional): Offset for pagination (default: 0)
                         - vendor (optional): Filter by package vendor
                         - name (optional): Filter by package name
@@ -499,12 +491,10 @@ class WazuhMCPServer:
                         q=args.q,
                         distinct=args.distinct,
                     )
-                    return [
-                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
-                    ]
+                    return self._format(data)
                 except Exception as e:
                     logger.error("Failed to get agent packages: %s", e)
-                    return [{"type": "text", "text": f"Error retrieving agent packages: {str(e)}"}]
+                    raise ToolError(f"Error retrieving agent packages: {str(e)}") from e
 
         if self._enabled("GetAgentProcessesTool"):
 
@@ -518,7 +508,7 @@ class WazuhMCPServer:
                 Args:
                     args: An object containing:
                         - agent_id (required): Agent ID to get processes from (e.g., "000", "001")
-                        - limit (optional): Maximum number of processes to return (default: 500)
+                        - limit (optional): Maximum number of processes to return (default: 50)
                         - offset (optional): Offset for pagination (default: 0)
                         - pid (optional): Filter by process ID
                         - name (optional): Filter by process name
@@ -563,12 +553,10 @@ class WazuhMCPServer:
                         q=args.q,
                         distinct=args.distinct,
                     )
-                    return [
-                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
-                    ]
+                    return self._format(data)
                 except Exception as e:
                     logger.error("Failed to get agent processes: %s", e)
-                    return [{"type": "text", "text": f"Error retrieving agent processes: {str(e)}"}]
+                    raise ToolError(f"Error retrieving agent processes: {str(e)}") from e
 
         if self._enabled("ListRulesTool"):
 
@@ -582,7 +570,7 @@ class WazuhMCPServer:
                 Args:
                     args: An object containing:
                         - rule_ids (optional): List of specific rule IDs to retrieve
-                        - limit (optional): Maximum number of rules to return (default: 500)
+                        - limit (optional): Maximum number of rules to return (default: 50)
                         - offset (optional): Offset for pagination (default: 0)
                         - search (optional): Text search in rule descriptions/content
                         - group (optional): Filter by rule group (e.g., "sysmon", "windows")
@@ -625,12 +613,10 @@ class WazuhMCPServer:
                         mitre=args.mitre,
                         distinct=args.distinct,
                     )
-                    return [
-                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
-                    ]
+                    return self._format(data)
                 except Exception as e:
                     logger.error("Failed to list rules: %s", e)
-                    return [{"type": "text", "text": f"Error listing rules: {str(e)}"}]
+                    raise ToolError(f"Error listing rules: {str(e)}") from e
 
         if self._enabled("GetRuleFileContentTool"):
 
@@ -666,20 +652,13 @@ class WazuhMCPServer:
                     # Handle different response formats
                     if args.raw and isinstance(data, dict) and "content" in data:
                         # For raw responses, return the plain text content directly
-                        return [{"type": "text", "text": self._safe_truncate(data["content"])}]
+                        return self._safe_truncate(data["content"])
                     else:
                         # For JSON responses, format as JSON
-                        return [
-                            {
-                                "type": "text",
-                                "text": self._safe_truncate(json.dumps(data, indent=2)),
-                            },
-                        ]
+                        return self._format(data)
                 except Exception as e:
                     logger.error("Failed to get rule file content: %s", e)
-                    return [
-                        {"type": "text", "text": f"Error retrieving rule file content: {str(e)}"},
-                    ]
+                    raise ToolError(f"Error retrieving rule file content: {str(e)}") from e
 
         if self._enabled("GetAgentSCATool"):
 
@@ -696,7 +675,7 @@ class WazuhMCPServer:
                         - name (optional): Filter by policy name
                         - description (optional): Filter by policy description
                         - references (optional): Filter by references
-                        - limit (optional): Maximum number of SCA policies to return (default: 500)
+                        - limit (optional): Maximum number of SCA policies to return (default: 50)
                         - offset (optional): Offset for pagination (default: 0)
                         - sort, search, select, q, distinct (optional): Additional filtering
 
@@ -723,12 +702,10 @@ class WazuhMCPServer:
                         q=args.q,
                         distinct=args.distinct,
                     )
-                    return [
-                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
-                    ]
+                    return self._format(data)
                 except Exception as e:
                     logger.error("Failed to get agent SCA: %s", e)
-                    return [{"type": "text", "text": f"Error retrieving agent SCA: {str(e)}"}]
+                    raise ToolError(f"Error retrieving agent SCA: {str(e)}") from e
 
         if self._enabled("GetSCAPolicyChecksTool"):
 
@@ -756,7 +733,7 @@ class WazuhMCPServer:
                         - references (optional): Filter by references
                         - result (optional): Filter by result ("passed", "failed", "not_applicable")
                         - condition (optional): Filter by condition type
-                        - limit (optional): Maximum number of checks to return (default: 500)
+                        - limit (optional): Maximum number of checks to return (default: 50)
                         - offset (optional): Offset for pagination (default: 0)
                         - sort, search, select, q, distinct (optional): Additional filtering
 
@@ -794,14 +771,10 @@ class WazuhMCPServer:
                         q=args.q,
                         distinct=args.distinct,
                     )
-                    return [
-                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
-                    ]
+                    return self._format(data)
                 except Exception as e:
                     logger.error("Failed to get SCA policy checks: %s", e)
-                    return [
-                        {"type": "text", "text": f"Error retrieving SCA policy checks: {str(e)}"},
-                    ]
+                    raise ToolError(f"Error retrieving SCA policy checks: {str(e)}") from e
 
         if self._enabled("GetRuleFilesTool"):
 
@@ -839,20 +812,73 @@ class WazuhMCPServer:
                         select=args.select,
                         distinct=args.distinct,
                     )
-                    return [
-                        {"type": "text", "text": self._safe_truncate(json.dumps(data, indent=2))},
-                    ]
+                    return self._format(data)
                 except Exception as e:
                     logger.error("Failed to get rule files: %s", e)
-                    return [
-                        {"type": "text", "text": f"Error retrieving rule files: {str(e)}"},
-                    ]
+                    raise ToolError(f"Error retrieving rule files: {str(e)}") from e
 
-    def _safe_truncate(self, text: str, max_length: int = 32000) -> str:
-        """Truncate text to avoid overwhelming the client."""
+    def _safe_truncate(self, text: str, max_length: Optional[int] = None) -> str:
+        """Cut text to the output limit, saying how much was cut."""
+        max_length = max_length or self.config.server.max_output_chars
         if len(text) <= max_length:
             return text
-        return text[:max_length] + f"\\n\\n[... truncated {len(text) - max_length} characters ...]"
+        return (
+            text[:max_length] + f"\n\n[truncated: showing {max_length} of {len(text)} characters]"
+        )
+
+    @staticmethod
+    def _raise_if_failed(data) -> None:
+        """Wazuh reports total failure as HTTP 200 with "error": 1; surface that as a tool error.
+
+        Partial failures ("error": 2) keep their data, and their failed_items stay in the output.
+        """
+        if not isinstance(data, dict) or data.get("error") != 1:
+            return
+        body = data.get("data") or {}
+        if body.get("affected_items"):
+            return
+        reasons = []
+        for item in body.get("failed_items") or []:
+            err = item.get("error") or {}
+            ids = ",".join(str(i) for i in (item.get("id") or []))
+            reasons.append(f"{err.get('message', 'failed')} (code {err.get('code')}; ids {ids})")
+        raise ToolError(f"Wazuh API: {data.get('message', 'request failed')}: {'; '.join(reasons)}")
+
+    def _format(self, data) -> str:
+        """Compact JSON, cut to the output limit.
+
+        Wazuh responses carry their items in data.affected_items. When the output is too long, whole
+        items are dropped and a `truncated` object records how many were returned out of how many,
+        so a partial answer is never mistaken for a complete one.
+        """
+        self._raise_if_failed(data)
+        limit = self.config.server.max_output_chars
+        text = json.dumps(data, separators=(",", ":"), default=str)
+        if len(text) <= limit:
+            return text
+        items = data.get("data", {}).get("affected_items") if isinstance(data, dict) else None
+        if not isinstance(items, list) or not items:
+            return self._safe_truncate(text, limit)
+        original_chars, original_items = len(text), len(items)
+        total = data["data"].get("total_affected_items", original_items)
+        kept = list(items)
+        while kept:
+            kept = kept[: max(len(kept) * 3 // 4, len(kept) - 1)] if len(kept) > 1 else []
+            trimmed = {
+                **data,
+                "data": {**data["data"], "affected_items": kept},
+                "truncated": {
+                    "returned_items": len(kept),
+                    "original_items": original_items,
+                    "total_affected_items": total,
+                    "original_chars": original_chars,
+                    "hint": "lower 'limit', use 'select' for fewer fields, or page with 'offset'",
+                },
+            }
+            text = json.dumps(trimmed, separators=(",", ":"), default=str)
+            if len(text) <= limit:
+                return text
+        return self._safe_truncate(text, limit)
 
     def _normalize_args(self, raw_args, model_class):
         """Normalize arguments to handle both direct and wrapped formats."""

@@ -2,7 +2,7 @@
 Wazuh MCP Server - A Model Context Protocol server for Wazuh Manager integration.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "SOCFortress"
 __email__ = "info@socfortress.co"
 __description__ = "MCP server for Wazuh Manager integration with LLMs"
