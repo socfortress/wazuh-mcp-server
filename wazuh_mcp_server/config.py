@@ -52,6 +52,7 @@ class ServerConfig:
     read_only: bool = False
     transport: str = "stdio"
     auth_token: str = ""
+    max_output_chars: int = 32000
 
     @classmethod
     def from_env(cls) -> "ServerConfig":
@@ -73,6 +74,7 @@ class ServerConfig:
             read_only=os.getenv("WAZUH_READ_ONLY", "false").lower() in {"1", "true", "yes"},
             transport=os.getenv("MCP_TRANSPORT", "stdio").lower(),
             auth_token=os.getenv("MCP_AUTH_TOKEN", ""),
+            max_output_chars=int(os.getenv("MCP_MAX_OUTPUT_CHARS", "32000")),
         )
 
 

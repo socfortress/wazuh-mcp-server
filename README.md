@@ -170,6 +170,25 @@ pre-commit install
 
 Tool categories for `WAZUH_DISABLED_CATEGORIES`: `auth`, `agents`, `rules`, `sca`.
 
+### Output and errors
+
+- **Output.** Responses are compact JSON, capped at `MCP_MAX_OUTPUT_CHARS` (default 32000). When a response is too large, whole `affected_items` are dropped and a `truncated` object reports `returned_items`, `original_items`, `total_affected_items` and `original_chars`. Lower `limit`, `select` fewer fields, or page with `offset`.
+- **Limits.** List tools default to `limit: 50`.
+- **Errors.** Failures, including Wazuh "error": 1 responses, are returned as MCP tool errors (`isError: true`), not as normal text.
+
+### Docker
+
+```bash
+docker build -t wazuh-mcp-server .
+docker run --env-file .env -p 127.0.0.1:8000:8000 wazuh-mcp-server   # HTTP on :8000, needs MCP_AUTH_TOKEN
+```
+
+The image runs as a non-root user and has a health check on `/healthz`. Images are published to `ghcr.io/socfortress/wazuh-mcp-server`:
+- `main` and `sha-…` on every push to main
+- `X.Y.Z` and `X.Y` for `vX.Y.Z` tags
+
+See `CHANGELOG.md`.
+
 ### CLI Options
 
 ```bash

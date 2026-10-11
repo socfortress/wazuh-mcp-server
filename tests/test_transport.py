@@ -57,7 +57,9 @@ def test_http_requires_token(config):
 @pytest.mark.asyncio
 async def test_http_auth_and_health(config):
     app = make_server(config, auth_token="s3cret").http_app()
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://t"
+    ) as client:
         health = await client.get("/healthz")
         assert health.status_code == 200 and health.json() == {"status": "ok"}
         assert (await client.post("/mcp", json={})).status_code == 401
@@ -73,7 +75,11 @@ def test_env_config(monkeypatch):
     monkeypatch.setenv("WAZUH_READ_ONLY", "true")
     cfg = ServerConfig.from_env()
     assert (cfg.transport, cfg.auth_token, cfg.host, cfg.port, cfg.read_only) == (
-        "http", "tok", "0.0.0.0", 9000, True
+        "http",
+        "tok",
+        "0.0.0.0",
+        9000,
+        True,
     )
 
 
