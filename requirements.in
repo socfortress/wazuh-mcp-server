@@ -1,4 +1,4 @@
-fastmcp>=0.4
+fastmcp>=2.10,<3
 httpx[http2]>=0.27
 pydantic>=2.7
 PyYAML>=6.0

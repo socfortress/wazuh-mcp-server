@@ -2,12 +2,17 @@
 Main MCP server implementation.
 """
 
+import hmac
 import json
 import logging
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
+import uvicorn
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
+from starlette.middleware import Middleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from .client import WazuhClient
 from .config import Config
@@ -231,6 +236,52 @@ class GetRuleFilesArgs(BaseModel):
     distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
+# Tool name -> (category, writes). `writes` marks tools that change state on the Wazuh manager;
+# they are not registered when WAZUH_READ_ONLY is true. Every current tool only reads.
+# AuthenticateTool only refreshes this server's own JWT.
+TOOL_META: Dict[str, Tuple[str, bool]] = {
+    "AuthenticateTool": ("auth", False),
+    "GetAgentsTool": ("agents", False),
+    "GetAgentPortsTool": ("agents", False),
+    "GetAgentPackagesTool": ("agents", False),
+    "GetAgentProcessesTool": ("agents", False),
+    "ListRulesTool": ("rules", False),
+    "GetRuleFileContentTool": ("rules", False),
+    "GetRuleFilesTool": ("rules", False),
+    "GetAgentSCATool": ("sca", False),
+    "GetSCAPolicyChecksTool": ("sca", False),
+}
+
+
+class BearerAuthMiddleware:
+    """Require `Authorization: Bearer <MCP_AUTH_TOKEN>` on every HTTP path except /healthz."""
+
+    def __init__(self, app, token: str) -> None:
+        self.app = app
+        self.token = token.encode()
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http" or scope.get("path") == "/healthz":
+            await self.app(scope, receive, send)
+            return
+        header = dict(scope.get("headers") or []).get(b"authorization", b"")
+        scheme, _, presented = header.partition(b" ")
+        if scheme.lower() != b"bearer" or not hmac.compare_digest(presented.strip(), self.token):
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 401,
+                    "headers": [
+                        (b"content-type", b"application/json"),
+                        (b"www-authenticate", b"Bearer"),
+                    ],
+                }
+            )
+            await send({"type": "http.response.body", "body": b'{"error":"Unauthorized"}'})
+            return
+        await self.app(scope, receive, send)
+
+
 class WazuhMCPServer:
     """Main MCP server for Wazuh integration."""
 
@@ -242,6 +293,22 @@ class WazuhMCPServer:
         # Register tools
         self._register_tools()
 
+        @self.app.custom_route("/healthz", methods=["GET"], include_in_schema=False)
+        async def healthz(_request: Request) -> JSONResponse:
+            return JSONResponse({"status": "ok"})
+
+    def _enabled(self, name: str) -> bool:
+        """Whether a tool should be registered, given disabled tools, categories and read-only mode."""
+        category, writes = TOOL_META.get(name, ("other", True))
+        server = self.config.server
+        if name in server.disabled_tools or category in server.disabled_categories:
+            logger.info("Tool %s disabled by configuration", name)
+            return False
+        if server.read_only and writes:
+            logger.info("Tool %s not registered: WAZUH_READ_ONLY is set", name)
+            return False
+        return True
+
     def _get_client(self) -> WazuhClient:
         """Get or create Wazuh client."""
         if self._client is None:
@@ -251,7 +318,7 @@ class WazuhMCPServer:
     def _register_tools(self) -> None:
         """Register all available tools."""
 
-        if "AuthenticateTool" not in self.config.server.disabled_tools:
+        if self._enabled("AuthenticateTool"):
 
             @self.app.tool(
                 name="AuthenticateTool",
@@ -279,7 +346,7 @@ class WazuhMCPServer:
                     logger.error("Authentication failed: %s", e)
                     return [{"type": "text", "text": f"Authentication failed: {str(e)}"}]
 
-        if "GetAgentsTool" not in self.config.server.disabled_tools:
+        if self._enabled("GetAgentsTool"):
 
             @self.app.tool(
                 name="GetAgentsTool",
@@ -328,7 +395,7 @@ class WazuhMCPServer:
                     logger.error("Failed to get agents: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agents: {str(e)}"}]
 
-        if "GetAgentPortsTool" not in self.config.server.disabled_tools:
+        if self._enabled("GetAgentPortsTool"):
 
             @self.app.tool(
                 name="GetAgentPortsTool",
@@ -386,7 +453,7 @@ class WazuhMCPServer:
                     logger.error("Failed to get agent ports: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agent ports: {str(e)}"}]
 
-        if "GetAgentPackagesTool" not in self.config.server.disabled_tools:
+        if self._enabled("GetAgentPackagesTool"):
 
             @self.app.tool(
                 name="GetAgentPackagesTool",
@@ -439,7 +506,7 @@ class WazuhMCPServer:
                     logger.error("Failed to get agent packages: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agent packages: {str(e)}"}]
 
-        if "GetAgentProcessesTool" not in self.config.server.disabled_tools:
+        if self._enabled("GetAgentProcessesTool"):
 
             @self.app.tool(
                 name="GetAgentProcessesTool",
@@ -503,7 +570,7 @@ class WazuhMCPServer:
                     logger.error("Failed to get agent processes: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agent processes: {str(e)}"}]
 
-        if "ListRulesTool" not in self.config.server.disabled_tools:
+        if self._enabled("ListRulesTool"):
 
             @self.app.tool(
                 name="ListRulesTool",
@@ -565,7 +632,7 @@ class WazuhMCPServer:
                     logger.error("Failed to list rules: %s", e)
                     return [{"type": "text", "text": f"Error listing rules: {str(e)}"}]
 
-        if "GetRuleFileContentTool" not in self.config.server.disabled_tools:
+        if self._enabled("GetRuleFileContentTool"):
 
             @self.app.tool(
                 name="GetRuleFileContentTool",
@@ -614,7 +681,7 @@ class WazuhMCPServer:
                         {"type": "text", "text": f"Error retrieving rule file content: {str(e)}"},
                     ]
 
-        if "GetAgentSCATool" not in self.config.server.disabled_tools:
+        if self._enabled("GetAgentSCATool"):
 
             @self.app.tool(
                 name="GetAgentSCATool",
@@ -663,7 +730,7 @@ class WazuhMCPServer:
                     logger.error("Failed to get agent SCA: %s", e)
                     return [{"type": "text", "text": f"Error retrieving agent SCA: {str(e)}"}]
 
-        if "GetSCAPolicyChecksTool" not in self.config.server.disabled_tools:
+        if self._enabled("GetSCAPolicyChecksTool"):
 
             @self.app.tool(
                 name="GetSCAPolicyChecksTool",
@@ -736,7 +803,7 @@ class WazuhMCPServer:
                         {"type": "text", "text": f"Error retrieving SCA policy checks: {str(e)}"},
                     ]
 
-        if "GetRuleFilesTool" not in self.config.server.disabled_tools:
+        if self._enabled("GetRuleFilesTool"):
 
             @self.app.tool(
                 name="GetRuleFilesTool",
@@ -803,13 +870,30 @@ class WazuhMCPServer:
             # Fallback to empty model
             return model_class()
 
+    def http_app(self):
+        """Streamable HTTP app at /mcp with bearer-token auth and an open /healthz."""
+        token = self.config.server.auth_token
+        if not token:
+            raise ValueError("MCP_AUTH_TOKEN is required for the HTTP transport")
+        return self.app.http_app(
+            path="/mcp", middleware=[Middleware(BearerAuthMiddleware, token=token)]
+        )
+
     def start(self, host: str = None, port: int = None) -> None:
-        """Start the MCP server using stdio transport."""
-        logger.info("Starting Wazuh MCP Server (stdio transport)")
+        """Start the MCP server on the configured transport (stdio by default)."""
+        server = self.config.server
         logger.info("Wazuh URL: %s", self.config.wazuh.url)
         logger.info("SSL Verify: %s", self.config.wazuh.ssl_verify)
 
-        # stdio transport is required when the server is invoked via MCP command in .mcp.json
+        if server.transport == "http":
+            host = host or server.host
+            port = port or server.port
+            logger.info("Starting Wazuh MCP Server (HTTP transport) on %s:%s/mcp", host, port)
+            uvicorn.run(self.http_app(), host=host, port=port, log_level=server.log_level.lower())
+            return
+
+        # stdio is what MCP clients use when they launch the server as a subprocess (.mcp.json).
+        logger.info("Starting Wazuh MCP Server (stdio transport)")
         self.app.run()
 
     async def close(self) -> None:
