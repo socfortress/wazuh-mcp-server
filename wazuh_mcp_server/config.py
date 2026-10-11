@@ -50,6 +50,8 @@ class ServerConfig:
     disabled_tools: List[str] = field(default_factory=list)
     disabled_categories: List[str] = field(default_factory=list)
     read_only: bool = False
+    transport: str = "stdio"
+    auth_token: str = ""
 
     @classmethod
     def from_env(cls) -> "ServerConfig":
@@ -69,6 +71,8 @@ class ServerConfig:
             disabled_tools=disabled_tools,
             disabled_categories=disabled_categories,
             read_only=os.getenv("WAZUH_READ_ONLY", "false").lower() in {"1", "true", "yes"},
+            transport=os.getenv("MCP_TRANSPORT", "stdio").lower(),
+            auth_token=os.getenv("MCP_AUTH_TOKEN", ""),
         )
 
 

@@ -99,11 +99,25 @@ wazuh-mcp-server
 # Or using the Python module
 python -m wazuh_mcp_server
 
-# With custom configuration
-wazuh-mcp-server --host 0.0.0.0 --port 8000 --log-level DEBUG
+# Streamable HTTP for networked clients (requires MCP_AUTH_TOKEN)
+MCP_AUTH_TOKEN=$(openssl rand -hex 32) wazuh-mcp-server --transport http --host 0.0.0.0 --port 8000
 ```
 
-The server will start and be available at `http://127.0.0.1:8000` (or your configured host/port).
+By default the server speaks MCP over **stdio**, for clients that launch it as a subprocess (`.mcp.json`).
+With `--transport http` (or `MCP_TRANSPORT=http`) it serves streamable HTTP at `http://<host>:<port>/mcp`:
+
+- Every request must carry `Authorization: Bearer <MCP_AUTH_TOKEN>`. The server refuses to start in HTTP mode without a token.
+- `GET /healthz` is unauthenticated, for container health checks.
+
+Example from Pydantic AI:
+
+```python
+from pydantic_ai.mcp import MCPToolset
+
+wazuh = MCPToolset("http://wazuh-mcp:8000/mcp", id="wazuh", headers={"Authorization": f"Bearer {token}"})
+async with wazuh:
+    agents = await wazuh.direct_call_tool("GetAgentsTool", {"args": {"q": "id=021"}})
+```
 
 ---
 
@@ -145,12 +159,16 @@ pre-commit install
 | `WAZUH_PROD_PASSWORD` | Wazuh password | None | ✅ |
 | `WAZUH_PROD_SSL_VERIFY` | SSL verification | `true` | ❌ |
 | `WAZUH_PROD_TIMEOUT` | Request timeout (seconds) | `30` | ❌ |
-| `MCP_SERVER_HOST` | Server host | `127.0.0.1` | ❌ |
-| `MCP_SERVER_PORT` | Server port | `8000` | ❌ |
+| `MCP_TRANSPORT` | `stdio` or `http` | `stdio` | ❌ |
+| `MCP_SERVER_HOST` | HTTP bind host | `127.0.0.1` | ❌ |
+| `MCP_SERVER_PORT` | HTTP port | `8000` | ❌ |
+| `MCP_AUTH_TOKEN` | Bearer token for the HTTP transport | None | ✅ for `http` |
 | `LOG_LEVEL` | Logging level | `INFO` | ❌ |
 | `WAZUH_DISABLED_TOOLS` | Comma-separated list of disabled tools | None | ❌ |
 | `WAZUH_DISABLED_CATEGORIES` | Comma-separated list of disabled categories | None | ❌ |
-| `WAZUH_READ_ONLY` | Enable read-only mode | `false` | ❌ |
+| `WAZUH_READ_ONLY` | Don't register tools that change state on the manager. All current tools only read; new tools must be classified in `TOOL_META`, and unclassified tools count as writes. | `false` | ❌ |
+
+Tool categories for `WAZUH_DISABLED_CATEGORIES`: `auth`, `agents`, `rules`, `sca`.
 
 ### CLI Options
 
@@ -159,8 +177,9 @@ wazuh-mcp-server --help
 ```
 
 Available options:
-- `--host`: Host to bind server to (default: 127.0.0.1)
-- `--port`: Port to bind server to (default: 8000)
+- `--transport`: `stdio` or `http` (default: `MCP_TRANSPORT`, else stdio)
+- `--host`: HTTP bind host (default: `MCP_SERVER_HOST`, else 127.0.0.1)
+- `--port`: HTTP port (default: `MCP_SERVER_PORT`, else 8000)
 - `--log-level`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 - `--wazuh-url`: Wazuh Manager URL (overrides env var)
 - `--wazuh-username`: Wazuh username (overrides env var)

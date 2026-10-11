@@ -23,15 +23,21 @@ def create_parser() -> argparse.ArgumentParser:
         description="Wazuh MCP Server - Model Context Protocol server for Wazuh Manager",
     )
     parser.add_argument(
+        "--transport",
+        choices=["stdio", "http"],
+        default=None,
+        help="MCP transport (default: MCP_TRANSPORT env var, else stdio)",
+    )
+    parser.add_argument(
         "--host",
-        default="127.0.0.1",
-        help="Host to bind server to (default: 127.0.0.1)",
+        default=None,
+        help="Host to bind the HTTP transport to (default: MCP_SERVER_HOST env var, else 127.0.0.1)",
     )
     parser.add_argument(
         "--port",
         type=int,
-        default=8000,
-        help="Port to bind server to (default: 8000)",
+        default=None,
+        help="Port for the HTTP transport (default: MCP_SERVER_PORT env var, else 8000)",
     )
     parser.add_argument(
         "--log-level",
@@ -76,8 +82,13 @@ def main() -> None:
     if args.no_ssl_verify:
         config.wazuh.ssl_verify = False
 
-    config.server.host = args.host
-    config.server.port = args.port
+    # CLI flags override the environment only when given.
+    if args.transport:
+        config.server.transport = args.transport
+    if args.host:
+        config.server.host = args.host
+    if args.port:
+        config.server.port = args.port
     config.server.log_level = args.log_level
 
     try:
