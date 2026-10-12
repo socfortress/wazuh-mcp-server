@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/socfortress-wazuh-mcp-server-badge.png)](https://mseep.ai/app/socfortress-wazuh-mcp-server)
+
 # Wazuh MCP Server
 
 A production-ready **Model Context Protocol (MCP) server** for seamless integration between Wazuh SIEM and Large Language Models (LLMs).
