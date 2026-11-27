@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from wazuh_mcp_server import server as server_module
-from wazuh_mcp_server.config import Config, ServerConfig
+from wazuh_mcp_server.config import Config, IndexerConfig, ServerConfig
 from wazuh_mcp_server.server import TOOL_META, WazuhMCPServer
 
 
@@ -23,6 +23,8 @@ def tool_names(server):
 
 def test_every_tool_is_classified(config):
     """New tools must declare a category and whether they write, or read-only mode can't gate them."""
+    # Alert tools only register when an indexer is configured.
+    config.indexer = IndexerConfig(url="https://idx:9200", username="u", password="p")
     assert tool_names(make_server(config)) == set(TOOL_META)
 
 

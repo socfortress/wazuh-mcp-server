@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 ## [0.2.0] - Unreleased
 
 ### Added
+- Alert tools backed by the Wazuh Indexer: `SearchAlertsTool` (filter by time range, agent, rule,
+  level, rule group, MITRE technique, source IP or a Lucene query) and `GetAlertsSummaryTool`
+  (alert counts grouped by a field, plus counts per level). They are configured with
+  `WAZUH_INDEXER_*`, registered only when `WAZUH_INDEXER_URL` is set, and form the `alerts` category.
 - Streamable HTTP transport (`--transport http` / `MCP_TRANSPORT`) at `/mcp`, with bearer-token
   auth (`MCP_AUTH_TOKEN`) and an unauthenticated `GET /healthz`.
 - Every tool is classified in `TOOL_META`. `WAZUH_READ_ONLY` and `WAZUH_DISABLED_CATEGORIES` are enforced.
