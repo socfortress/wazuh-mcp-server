@@ -77,6 +77,11 @@ WAZUH_PROD_PASSWORD=your-password
 WAZUH_PROD_SSL_VERIFY=false
 WAZUH_PROD_TIMEOUT=30
 
+# Wazuh Indexer Configuration (optional, enables the alert tools)
+# WAZUH_INDEXER_URL=https://your-wazuh-indexer:9200
+# WAZUH_INDEXER_USERNAME=your-indexer-username
+# WAZUH_INDEXER_PASSWORD=your-indexer-password
+
 # MCP Server Configuration
 MCP_SERVER_HOST=127.0.0.1
 MCP_SERVER_PORT=8000
@@ -159,6 +164,12 @@ pre-commit install
 | `WAZUH_PROD_PASSWORD` | Wazuh password | None | ✅ |
 | `WAZUH_PROD_SSL_VERIFY` | SSL verification | `true` | ❌ |
 | `WAZUH_PROD_TIMEOUT` | Request timeout (seconds) | `30` | ❌ |
+| `WAZUH_INDEXER_URL` | Wazuh Indexer (OpenSearch) URL. Alert tools are registered only when this is set. | None | ❌ |
+| `WAZUH_INDEXER_USERNAME` | Indexer username (needs read access to the alerts index) | None | ✅ with `WAZUH_INDEXER_URL` |
+| `WAZUH_INDEXER_PASSWORD` | Indexer password | None | ✅ with `WAZUH_INDEXER_URL` |
+| `WAZUH_INDEXER_SSL_VERIFY` | Indexer SSL verification | `true` | ❌ |
+| `WAZUH_INDEXER_TIMEOUT` | Indexer request timeout (seconds) | `30` | ❌ |
+| `WAZUH_INDEXER_ALERTS_INDEX` | Index pattern holding alerts | `wazuh-alerts-*` | ❌ |
 | `MCP_TRANSPORT` | `stdio` or `http` | `stdio` | ❌ |
 | `MCP_SERVER_HOST` | HTTP bind host | `127.0.0.1` | ❌ |
 | `MCP_SERVER_PORT` | HTTP port | `8000` | ❌ |
@@ -168,7 +179,7 @@ pre-commit install
 | `WAZUH_DISABLED_CATEGORIES` | Comma-separated list of disabled categories | None | ❌ |
 | `WAZUH_READ_ONLY` | Don't register tools that change state on the manager. All current tools only read; new tools must be classified in `TOOL_META`, and unclassified tools count as writes. | `false` | ❌ |
 
-Tool categories for `WAZUH_DISABLED_CATEGORIES`: `auth`, `agents`, `rules`, `sca`.
+Tool categories for `WAZUH_DISABLED_CATEGORIES`: `auth`, `agents`, `rules`, `sca`, `alerts`.
 
 ### Output and errors
 
@@ -448,6 +459,53 @@ The server exposes the following MCP tools:
   - `select` (optional): Select which fields to return
   - `q` (optional): Query to filter results by
   - `distinct` (optional): Look for distinct values
+### 10. SearchAlertsTool
+- **Purpose**: Search alerts stored in the Wazuh Indexer, newest first. Alerts are not served by the
+  Wazuh Manager API, so this tool talks to the indexer and is registered only when
+  `WAZUH_INDEXER_URL` is set.
+- **Parameters**:
+  - `start` (optional): Start of the time range, ISO-8601 or date math (default: `now-24h`)
+  - `end` (optional): End of the time range (default: `now`)
+  - `agent_id` / `agent_name` (optional): Filter by agent
+  - `rule_ids` (optional): List of rule IDs
+  - `min_level` / `max_level` (optional): Rule level range (0-16)
+  - `rule_groups` (optional): Rule groups, any match (e.g. `["authentication_failed"]`)
+  - `mitre_ids` (optional): MITRE ATT&CK technique IDs, any match (e.g. `["T1110"]`)
+  - `srcip` (optional): Source IP (`data.srcip`)
+  - `query` (optional): Lucene query string for anything else
+  - `limit` (optional): Maximum alerts to return (default: 20, max: 500)
+  - `offset` (optional): Offset for pagination
+  - `sort_order` (optional): `desc` (default) or `asc` by timestamp
+  - `select` (optional): Alert fields to return
+
+**Example usage:**
+```python
+{"args": {"min_level": 10, "start": "now-1h"}}
+{"args": {"agent_id": "001", "rule_groups": ["authentication_failed"]}}
+{"args": {"mitre_ids": ["T1110"], "select": ["timestamp", "agent.name", "rule.description"]}}
+```
+
+**Returns:**
+- `data.affected_items` (alerts, each with its indexer `_id`) and `data.total_affected_items`
+
+### 11. GetAlertsSummaryTool
+- **Purpose**: Count alerts matching the same filters as `SearchAlertsTool`, grouped by a field,
+  plus counts per rule level. Useful for an overview before pulling individual alerts.
+- **Parameters**: the `SearchAlertsTool` filters, plus
+  - `group_by` (optional): one of `agent.id`, `agent.name`, `rule.id` (default), `rule.level`,
+    `rule.groups`, `rule.description`, `rule.mitre.id`, `rule.mitre.tactic`, `data.srcip`,
+    `data.dstuser`, `decoder.name`, `location`, `manager.name`
+  - `top` (optional): Number of groups to return (default: 10)
+
+**Example usage:**
+```python
+{"args": {}}
+{"args": {"group_by": "agent.name", "min_level": 12, "start": "now-7d"}}
+```
+
+**Returns:**
+- `data.total_alerts`, `data.groups` (value and count; rule description and level when grouping
+  by `rule.id`), and `data.by_level`
 
 ---
 
@@ -563,6 +621,7 @@ wazuh-mcp-server/
 │   ├── __init__.py           # Package initialization
 │   ├── __main__.py           # CLI entry point
 │   ├── client.py             # Wazuh API client
+│   ├── indexer.py            # Wazuh Indexer client (alerts)
 │   ├── config.py             # Configuration management
 │   ├── server.py             # MCP server implementation
 │   └── exceptions.py         # Custom exceptions

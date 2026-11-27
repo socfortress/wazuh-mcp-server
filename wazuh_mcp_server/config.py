@@ -41,6 +41,48 @@ class WazuhConfig:
 
 
 @dataclass
+class IndexerConfig:
+    """Configuration for the Wazuh Indexer (OpenSearch), where alerts are stored.
+
+    Optional: when no URL is set, the alert tools are not registered.
+    """
+
+    url: str = ""
+    username: str = ""
+    password: str = ""
+    ssl_verify: bool = True
+    timeout: int = 30
+    alerts_index: str = "wazuh-alerts-*"
+
+    @classmethod
+    def from_env(cls, prefix: str = "WAZUH_INDEXER") -> "IndexerConfig":
+        """Create configuration from environment variables."""
+        return cls(
+            url=os.getenv(f"{prefix}_URL", ""),
+            username=os.getenv(f"{prefix}_USERNAME", ""),
+            password=os.getenv(f"{prefix}_PASSWORD", ""),
+            ssl_verify=os.getenv(f"{prefix}_SSL_VERIFY", "true").lower()
+            not in {"0", "false", "no"},
+            timeout=int(os.getenv(f"{prefix}_TIMEOUT", "30")),
+            alerts_index=os.getenv(f"{prefix}_ALERTS_INDEX", "wazuh-alerts-*"),
+        )
+
+    @property
+    def enabled(self) -> bool:
+        """Whether an indexer is configured."""
+        return bool(self.url)
+
+    def validate(self) -> None:
+        """Validate configuration (only when an indexer URL is set)."""
+        if not self.url:
+            return
+        if not self.username:
+            raise ValueError("Wazuh Indexer username is required when WAZUH_INDEXER_URL is set")
+        if not self.password:
+            raise ValueError("Wazuh Indexer password is required when WAZUH_INDEXER_URL is set")
+
+
+@dataclass
 class ServerConfig:
     """Configuration for the MCP server."""
 
@@ -84,15 +126,21 @@ class Config:
 
     wazuh: WazuhConfig
     server: ServerConfig
+    indexer: IndexerConfig = field(default_factory=IndexerConfig)
 
     @classmethod
     def from_env(cls) -> "Config":
         """Create configuration from environment variables."""
-        return cls(wazuh=WazuhConfig.from_env(), server=ServerConfig.from_env())
+        return cls(
+            wazuh=WazuhConfig.from_env(),
+            server=ServerConfig.from_env(),
+            indexer=IndexerConfig.from_env(),
+        )
 
     def validate(self) -> None:
         """Validate all configuration."""
         self.wazuh.validate()
+        self.indexer.validate()
 
     def setup_logging(self) -> None:
         """Setup logging configuration."""

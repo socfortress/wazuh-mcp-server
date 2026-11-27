@@ -5,7 +5,7 @@ Main MCP server implementation.
 import hmac
 import json
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 
 import uvicorn
 from fastmcp import FastMCP
@@ -17,6 +17,7 @@ from starlette.responses import JSONResponse
 
 from .client import WazuhClient
 from .config import Config
+from .indexer import SUMMARY_FIELDS, IndexerClient
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +238,73 @@ class GetRuleFilesArgs(BaseModel):
     distinct: Optional[bool] = Field(False, description="Look for distinct values")
 
 
+class AlertFilterArgs(BaseModel):
+    """Filters shared by the alert tools."""
+
+    start: Optional[str] = Field(
+        "now-24h",
+        description="Start of the time range: ISO-8601 timestamp or date math such as 'now-1h', 'now-7d'",
+    )
+    end: Optional[str] = Field("now", description="End of the time range (ISO-8601 or date math)")
+    agent_id: Optional[str] = Field(None, description="Filter by agent ID (e.g., '001')")
+    agent_name: Optional[str] = Field(None, description="Filter by exact agent name")
+    rule_ids: Optional[List[str]] = Field(None, description="Filter by one or more rule IDs")
+    min_level: Optional[int] = Field(
+        None, ge=0, le=16, description="Minimum rule level (0-16), e.g. 10 for high severity"
+    )
+    max_level: Optional[int] = Field(None, ge=0, le=16, description="Maximum rule level (0-16)")
+    rule_groups: Optional[List[str]] = Field(
+        None, description="Filter by rule groups (any match), e.g. ['authentication_failed']"
+    )
+    mitre_ids: Optional[List[str]] = Field(
+        None, description="Filter by MITRE ATT&CK technique IDs (any match), e.g. ['T1110']"
+    )
+    srcip: Optional[str] = Field(None, description="Filter by source IP (data.srcip)")
+    query: Optional[str] = Field(
+        None,
+        description="Lucene query_string for anything else, e.g. 'rule.description:*ssh* AND data.dstuser:root'",
+    )
+
+    def filters(self) -> Dict:
+        return {
+            "start": self.start,
+            "end": self.end,
+            "agent_id": self.agent_id,
+            "agent_name": self.agent_name,
+            "rule_ids": self.rule_ids,
+            "min_level": self.min_level,
+            "max_level": self.max_level,
+            "rule_groups": self.rule_groups,
+            "mitre_ids": self.mitre_ids,
+            "srcip": self.srcip,
+            "query": self.query,
+        }
+
+
+class SearchAlertsArgs(AlertFilterArgs):
+    """Arguments for searching alerts in the Wazuh Indexer."""
+
+    limit: Optional[int] = Field(20, ge=1, le=500, description="Maximum number of alerts to return")
+    offset: Optional[int] = Field(0, ge=0, le=9500, description="Offset for pagination")
+    sort_order: Literal["desc", "asc"] = Field(
+        "desc", description="Sort by timestamp: 'desc' (newest first) or 'asc'"
+    )
+    select: Optional[List[str]] = Field(
+        None,
+        description="Alert fields to return, e.g. ['timestamp','agent.name','rule.id','rule.level','rule.description']",
+    )
+
+
+class GetAlertsSummaryArgs(AlertFilterArgs):
+    """Arguments for summarizing alert counts."""
+
+    group_by: str = Field(
+        "rule.id",
+        description=f"Field to group counts by. One of: {', '.join(sorted(SUMMARY_FIELDS))}",
+    )
+    top: Optional[int] = Field(10, ge=1, le=100, description="Number of groups to return")
+
+
 # Tool name -> (category, writes). `writes` marks tools that change state on the Wazuh manager;
 # they are not registered when WAZUH_READ_ONLY is true. Every current tool only reads.
 # AuthenticateTool only refreshes this server's own JWT.
@@ -251,6 +319,8 @@ TOOL_META: Dict[str, Tuple[str, bool]] = {
     "GetRuleFilesTool": ("rules", False),
     "GetAgentSCATool": ("sca", False),
     "GetSCAPolicyChecksTool": ("sca", False),
+    "SearchAlertsTool": ("alerts", False),
+    "GetAlertsSummaryTool": ("alerts", False),
 }
 
 
@@ -289,6 +359,7 @@ class WazuhMCPServer:
     def __init__(self, config: Config) -> None:
         self.config = config
         self._client: Optional[WazuhClient] = None
+        self._indexer: Optional[IndexerClient] = None
         self.app = FastMCP(name="Wazuh MCP Server", version="0.2.0")
 
         # Register tools
@@ -316,8 +387,85 @@ class WazuhMCPServer:
             self._client = WazuhClient(self.config.wazuh)
         return self._client
 
+    def _get_indexer(self) -> IndexerClient:
+        """Get or create Wazuh Indexer client."""
+        if self._indexer is None:
+            self._indexer = IndexerClient(self.config.indexer)
+        return self._indexer
+
     def _register_tools(self) -> None:
         """Register all available tools."""
+        self._register_manager_tools()
+        if self.config.indexer.enabled:
+            self._register_alert_tools()
+        else:
+            logger.info("Alert tools not registered: WAZUH_INDEXER_URL is not set")
+
+    def _register_alert_tools(self) -> None:
+        """Register tools that query alerts in the Wazuh Indexer."""
+
+        if self._enabled("SearchAlertsTool"):
+
+            @self.app.tool(
+                name="SearchAlertsTool",
+                description="Search Wazuh alerts stored in the Wazuh Indexer, newest first. Defaults to the last 24 hours. Filter by time range (ISO-8601 or date math like 'now-1h'), agent, rule IDs, rule level range, rule groups, MITRE technique IDs, source IP, or a Lucene query string. Use 'select' to return only some fields.",
+            )
+            async def search_alerts_tool(args: SearchAlertsArgs):
+                """Search alerts in the Wazuh Indexer.
+
+                Example usage:
+                    {"args": {"min_level": 10, "start": "now-1h"}}
+                    {"args": {"agent_id": "001", "rule_groups": ["authentication_failed"]}}
+                    {"args": {"mitre_ids": ["T1110"], "select": ["timestamp", "agent.name", "rule.description"]}}
+                    {"args": {"query": "data.srcip:10.0.0.5", "start": "2025-01-01T00:00:00Z", "end": "2025-01-02T00:00:00Z"}}
+
+                Returns:
+                    JSON with data.affected_items (alerts, each with its indexer _id) and
+                    data.total_affected_items (all matches, not just those returned).
+                """
+                try:
+                    data = await self._get_indexer().search_alerts(
+                        limit=args.limit,
+                        offset=args.offset,
+                        sort_order=args.sort_order,
+                        select=args.select,
+                        **args.filters(),
+                    )
+                    return self._format(data)
+                except Exception as e:
+                    logger.error("Failed to search alerts: %s", e)
+                    raise ToolError(f"Error searching alerts: {str(e)}") from e
+
+        if self._enabled("GetAlertsSummaryTool"):
+
+            @self.app.tool(
+                name="GetAlertsSummaryTool",
+                description="Count Wazuh alerts in the Wazuh Indexer and group them by a field (rule.id, agent.name, rule.mitre.id, data.srcip, ...), with counts per rule level. Takes the same filters as SearchAlertsTool. Use it to get an overview before pulling individual alerts.",
+            )
+            async def get_alerts_summary_tool(args: GetAlertsSummaryArgs):
+                """Summarize alerts in the Wazuh Indexer.
+
+                Example usage:
+                    {"args": {}}  top rules in the last 24 hours
+                    {"args": {"group_by": "agent.name", "min_level": 12, "start": "now-7d"}}
+                    {"args": {"group_by": "data.srcip", "rule_groups": ["authentication_failed"]}}
+
+                Returns:
+                    JSON with data.total_alerts, data.groups (value and count) and data.by_level.
+                """
+                try:
+                    data = await self._get_indexer().summarize_alerts(
+                        group_by=args.group_by,
+                        top=args.top,
+                        **args.filters(),
+                    )
+                    return self._format(data)
+                except Exception as e:
+                    logger.error("Failed to summarize alerts: %s", e)
+                    raise ToolError(f"Error summarizing alerts: {str(e)}") from e
+
+    def _register_manager_tools(self) -> None:
+        """Register tools that call the Wazuh Manager API."""
 
         if self._enabled("AuthenticateTool"):
 
@@ -926,6 +1074,8 @@ class WazuhMCPServer:
         """Close the server and cleanup resources."""
         if self._client:
             await self._client.close()
+        if self._indexer:
+            await self._indexer.close()
 
 
 def create_server(config: Config = None) -> WazuhMCPServer:
