@@ -107,7 +107,7 @@ class IndexerClient:
         try:
             response = await self._client.post(url, json=body)
             response.raise_for_status()
-            return response.json()
+            raw = response.json()
         except httpx.HTTPStatusError as e:
             reason = e.response.text[:500]
             try:
@@ -121,6 +121,36 @@ class IndexerClient:
         except httpx.HTTPError as e:
             logger.error("Indexer request failed: %s", e)
             raise IndexerError(f"Indexer request failed: {e}") from e
+
+        # Query errors such as an unparsable query_string come back as HTTP 200 with every
+        # shard failed and no hits; without this check they read as "no matching alerts".
+        # Shards skipped by the pre-filter (e.g. daily indices outside the time range) count as
+        # successful without having searched, so they don't count as a shard that answered.
+        shards = raw.get("_shards") or {}
+        if shards.get("failed"):
+            reason = self._shard_failure_reason(shards)
+            searched = shards.get("successful", 0) - shards.get("skipped", 0)
+            if searched <= 0:
+                logger.error("Indexer search failed on all shards: %s", reason)
+                raise IndexerError(f"Indexer search failed: {reason}")
+            logger.warning("Indexer search failed on %s shard(s): %s", shards["failed"], reason)
+            raw["_partial"] = {
+                "failed_shards": shards["failed"],
+                "total_shards": shards.get("total"),
+                "reason": reason,
+            }
+        return raw
+
+    @staticmethod
+    def _shard_failure_reason(shards: Dict[str, Any]) -> str:
+        """Most specific reason from the first shard failure."""
+        failures = shards.get("failures") or [{}]
+        reason = failures[0].get("reason") or {}
+        if not isinstance(reason, str):
+            caused_by = reason.get("caused_by") or {}
+            reason = caused_by.get("reason") or reason.get("reason") or "unknown shard failure"
+        # Lucene parse errors append a long "Was expecting one of:" token list; keep line one.
+        return reason.strip().splitlines()[0]
 
     async def search_alerts(
         self,
@@ -150,7 +180,7 @@ class IndexerClient:
         total = hits.get("total", {})
         total_count = total.get("value", 0) if isinstance(total, dict) else total
         items = [{"_id": h.get("_id"), **(h.get("_source") or {})} for h in hits.get("hits", [])]
-        return {
+        result = {
             "data": {
                 "affected_items": items,
                 "total_affected_items": total_count,
@@ -160,6 +190,9 @@ class IndexerClient:
             "message": f"{len(items)} of {total_count} matching alerts returned",
             "error": 0,
         }
+        if "_partial" in raw:
+            result["partial"] = raw["_partial"]
+        return result
 
     async def summarize_alerts(
         self,
@@ -204,7 +237,7 @@ class IndexerClient:
             str(b.get("key")): b.get("doc_count")
             for b in raw.get("aggregations", {}).get("by_level", {}).get("buckets", [])
         }
-        return {
+        result = {
             "data": {
                 "total_alerts": total_count,
                 "group_by": group_by,
@@ -213,6 +246,9 @@ class IndexerClient:
             },
             "error": 0,
         }
+        if "_partial" in raw:
+            result["partial"] = raw["_partial"]
+        return result
 
     async def close(self) -> None:
         """Close the HTTP client."""

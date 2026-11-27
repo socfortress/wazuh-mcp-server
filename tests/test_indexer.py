@@ -200,6 +200,78 @@ class TestIndexerClient:
         with pytest.raises(IndexerError, match="400: Failed to parse query"):
             await indexer_client.search_alerts(query="((")
 
+    @pytest.mark.asyncio
+    async def test_all_shards_failed_is_an_error(self, indexer_client):
+        # What OpenSearch returns for an unparsable query_string: HTTP 200, no hits.
+        indexer_client._client.post.return_value = _response(
+            {
+                "_shards": {
+                    "total": 3,
+                    "successful": 0,
+                    "failed": 3,
+                    "failures": [
+                        {
+                            "reason": {
+                                "type": "query_shard_exception",
+                                "reason": "Failed to parse query [((]",
+                                "caused_by": {
+                                    "reason": "Cannot parse '((': Encountered <EOF>\n"
+                                    "Was expecting one of:\n    <NOT> ..."
+                                },
+                            }
+                        }
+                    ],
+                },
+                "hits": {"total": {"value": 0}, "hits": []},
+            }
+        )
+
+        with pytest.raises(IndexerError, match="Cannot parse") as excinfo:
+            await indexer_client.search_alerts(query="((")
+        assert "Was expecting" not in str(excinfo.value)
+
+    @pytest.mark.asyncio
+    async def test_failed_with_only_skipped_shards_is_an_error(self, indexer_client):
+        # Shards skipped by the time-range pre-filter count as successful without searching.
+        indexer_client._client.post.return_value = _response(
+            {
+                "_shards": {
+                    "total": 30,
+                    "successful": 27,
+                    "skipped": 27,
+                    "failed": 3,
+                    "failures": [{"reason": {"reason": "Failed to parse query [((]"}}],
+                },
+                "hits": {"total": {"value": 0}, "hits": []},
+            }
+        )
+
+        with pytest.raises(IndexerError, match="Failed to parse query"):
+            await indexer_client.search_alerts(query="((")
+
+    @pytest.mark.asyncio
+    async def test_some_shards_failed_is_reported(self, indexer_client):
+        indexer_client._client.post.return_value = _response(
+            {
+                **SEARCH_RESPONSE,
+                "_shards": {
+                    "total": 3,
+                    "successful": 2,
+                    "failed": 1,
+                    "failures": [{"reason": {"reason": "shard unavailable"}}],
+                },
+            }
+        )
+
+        result = await indexer_client.search_alerts()
+
+        assert result["data"]["total_affected_items"] == 42
+        assert result["partial"] == {
+            "failed_shards": 1,
+            "total_shards": 3,
+            "reason": "shard unavailable",
+        }
+
 
 class TestAlertTools:
     def _tool_names(self, server):
